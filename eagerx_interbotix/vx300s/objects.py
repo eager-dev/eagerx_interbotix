@@ -2,7 +2,6 @@
 from std_msgs.msg import Float32MultiArray
 
 # EAGERx IMPORTS
-from eagerx_reality.bridge import RealBridge
 from eagerx_pybullet.bridge import PybulletBridge
 from eagerx import Object, EngineNode, SpaceConverter, EngineState, Processor
 from eagerx.core.specs import ObjectSpec

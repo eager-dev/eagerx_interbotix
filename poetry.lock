@@ -228,20 +228,15 @@ pyqtgraph = ">=0.11.1,<0.12.0"
 
 [[package]]
 name = "eagerx-pybullet"
-version = "0.1.0"
+version = "0.1.1"
 description = "This repository contains the eagerx_pybllet package, which allows to simulate systems with EAGERx using pybullet."
 category = "main"
 optional = false
-python-versions = "^3.6.2"
-develop = true
+python-versions = ">=3.6.2,<4.0.0"
 
 [package.dependencies]
-eagerx = "^0.1.10"
-pybullet = "^3.2.1"
-
-[package.source]
-type = "directory"
-url = "../eagerx_pybullet"
+eagerx = ">=0.1.10,<0.2.0"
+pybullet = ">=3.2.1,<4.0.0"
 
 [[package]]
 name = "eagerx-reality"
@@ -1047,7 +1042,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
-content-hash = "700bb433a092f49d79161592dc04d594e566170bb06616ced0f147a87b5514df"
+content-hash = "105e37eda97ca10dda918f4ab0e1b80df553429f54f1d88eaf295db98b6c77e4"
 
 [metadata.files]
 alabaster = [
@@ -1196,7 +1191,10 @@ eagerx-gui = [
     {file = "eagerx_gui-0.1.4-py3-none-any.whl", hash = "sha256:75e9daf3993a6970532199320ea974229c523d7af9e393b9f79bc546d05d1590"},
     {file = "eagerx_gui-0.1.4.tar.gz", hash = "sha256:b245a561365f9b1639ba1946e9c099b0f049026735dd2f3b8a7bdc5da5b3ef69"},
 ]
-eagerx-pybullet = []
+eagerx-pybullet = [
+    {file = "eagerx_pybullet-0.1.1-py3-none-any.whl", hash = "sha256:d2235c6cf0838abcfa6514efccecac0a3c643f4d2a06dfb01c405d4ca6865e2c"},
+    {file = "eagerx_pybullet-0.1.1.tar.gz", hash = "sha256:5916d419b060028475291a9214d0fcb6c2782bfe276a0cebe69e858f82e0630a"},
+]
 eagerx-reality = [
     {file = "eagerx_reality-0.1.4-py3-none-any.whl", hash = "sha256:4128405a6d3f90388e691edbded6a4d3c5e9f25dbe1b76327e5f4308fb96132f"},
     {file = "eagerx_reality-0.1.4.tar.gz", hash = "sha256:e40611a850410c69928f14795cdaa084b6fd95fb269dcccc089524f0d6137fe2"},

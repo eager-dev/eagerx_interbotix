@@ -42,7 +42,7 @@ def test_integration_interbotix(eps, is_reactive, rtf, p):
     graph.connect(source=arm.sensors.pos, observation="observation")
 
     # Define bridges
-    bridge = Bridge.make("PybulletBridge", rate=rate, gui=True, is_reactive=is_reactive, real_time_factor=rtf,
+    bridge = Bridge.make("PybulletBridge", rate=rate, gui=False, is_reactive=is_reactive, real_time_factor=rtf,
                          process=p)
 
     # Define step function

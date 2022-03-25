@@ -10,8 +10,8 @@ eagerx_interbotix package
    :target: https://github.com/psf/black
    :alt: codestyle
 
-.. image:: https://github.com/eager-dev/eagerx/actions/workflows/ci.yml/badge.svg?branch=master
-  :target: https://github.com/eager-dev/eagerx/actions/workflows/ci.yml
+.. image:: https://github.com/eager-dev/eagerx_interbotix/actions/workflows/ci.yml/badge.svg?branch=master
+  :target: https://github.com/eager-dev/eagerx_interbotix/actions/workflows/ci.yml
   :alt: Continuous Integration
 
 .. contents:: Table of Contents

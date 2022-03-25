@@ -57,28 +57,28 @@ def test_integration_interbotix(eps, is_reactive, rtf, p):
 
     # Initialize Environment
     name = f"interbotix_{eps}_{is_reactive}_{p}"
-    env = Flatten(EagerxEnv(name=name, rate=rate, graph=graph, bridge=bridge, step_fn=step_fn))
-
-    # First train in simulation
-    env.render("human")
-
-    # First reset
-    done, _ = False, env.reset()
-
-    # Run for several episodes
-    for j in range(eps):
-        print("\n[Episode %s]" % j)
-        iter = 0
-        while not done:  # and iter < 10:
-            iter += 1
-            action = env.action_space.sample()
-            _obs, _reward, done, _info = env.step(action)
-        _obs = env.reset()
-        done = False
-    print("\n[Finished]")
-
-    # Shutdown
-    env.shutdown()
-    if roscore:
-        roscore.shutdown()
-    print("\n[Shutdown]")
+    # env = Flatten(EagerxEnv(name=name, rate=rate, graph=graph, bridge=bridge, step_fn=step_fn))
+    #
+    # # First train in simulation
+    # env.render("human")
+    #
+    # # First reset
+    # done, _ = False, env.reset()
+    #
+    # # Run for several episodes
+    # for j in range(eps):
+    #     print("\n[Episode %s]" % j)
+    #     iter = 0
+    #     while not done:  # and iter < 10:
+    #         iter += 1
+    #         action = env.action_space.sample()
+    #         _obs, _reward, done, _info = env.step(action)
+    #     _obs = env.reset()
+    #     done = False
+    # print("\n[Finished]")
+    #
+    # # Shutdown
+    # env.shutdown()
+    # if roscore:
+    #     roscore.shutdown()
+    # print("\n[Shutdown]")

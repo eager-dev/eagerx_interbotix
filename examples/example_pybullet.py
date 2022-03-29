@@ -1,3 +1,7 @@
+import os
+os.environ["PYBULLET_EGL"] = "1"
+# ^^^^ before importing eagerx_pybullet
+
 # ROS packages required
 from eagerx import Object, Bridge, initialize, log, process
 
@@ -9,7 +13,12 @@ from eagerx.wrappers import Flatten
 # Implementation specific
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
 import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
-import eagerx_interbotix.vx300s  # Registers object # noqa # pylint: disable=unused-import
+import eagerx_interbotix  # Registers objects # noqa # pylint: disable=unused-import
+
+# todo: document pybullet engine nodes, bridge.
+# todo: Add "step" to Image messages
+# todo: shared memory --> separate process
+# todo: headless rendering
 
 
 if __name__ == "__main__":
@@ -21,7 +30,19 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    # Create mops
+    # Create camera
+    urdf = os.path.dirname(eagerx_interbotix.__file__)
+    urdf += "/camera/assets/realsense2_d435.urdf"
+    cam = Object.make("Camera", "cam", rate=rate, sensors=["rgb"], urdf=urdf, optical_link="camera_color_optical_frame", calibration_link="camera_bottom_screw_frame")
+    graph.add(cam)
+
+    # Create solid object
+    import pybullet_data
+    urdf = "%s/%s.urdf" % (pybullet_data.getDataPath(), "cube_small")
+    cube = Object.make("Solid", "cube", urdf=urdf, rate=rate, sensors=["pos"])
+    graph.add(cube)
+
+    # Create arm
     arm = Object.make("Vx300s", "viper", sensors=["pos"], actuators=["pos_control", "gripper_control"],
                       states=["pos", "vel", "gripper"], rate=rate)
     graph.add(arm)
@@ -36,7 +57,7 @@ if __name__ == "__main__":
 
     # Define bridges
     bridge = Bridge.make("PybulletBridge", rate=rate, gui=True, is_reactive=True, real_time_factor=0,
-                         process=process.NEW_PROCESS)
+                         process=process.ENVIRONMENT)
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -61,8 +82,9 @@ if __name__ == "__main__":
     print(f"Episode {eps}")
     for i in range(int(50000 * rate)):
         obs, reward, done, info = env.step(action)
-        if i % 500 == 0:
+        if done:
             eps += 1
             obs = env.reset()
+            action = env.action_space.sample()
             print(f"Episode {eps}")
 

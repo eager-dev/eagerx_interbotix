@@ -7,13 +7,13 @@ authors = ["Jelle Luijkx <j.d.luijkx@tudelft.nl>", "Bas van der Heijden <d.s.van
 homepage = "https://github.com/eager-dev/eagerx_interbotix"
 repository = "https://github.com/eager-dev/eagerx_interbotix"
 documentation = "https://eagerx.readthedocs.io/en/master/"
-include = ["descriptions"]
 
 [tool.poetry.dependencies]
 python = "^3.6.2"
 eagerx-gui = "^0.1.4"
-eagerx-pybullet = "^0.1.0"
+eagerx-pybullet = "^0.1.1"
 eagerx-reality = "^0.1.4"
+scipy = "^1.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
@@ -22,7 +22,7 @@ pytest-cov = "^3.0.0"
 pytest-timeout = "^2.1.0"
 flake8 = "^4.0.1"
 flake8-bugbear = "^22.3.23"
-#eagerx-pybullet = {path = "../eagerx_pybullet", develop = true}
+eagerx-pybullet = {path = "../eagerx_pybullet", develop = true}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

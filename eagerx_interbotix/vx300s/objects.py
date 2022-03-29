@@ -119,7 +119,8 @@ class Vx300s(Object):
 
         # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
         path = os.path.dirname(eagerx_interbotix.__file__)
-        path += f"/../descriptions/urdf/{spec.config.robot_type}.urdf"
+        # path += f"/../descriptions/urdf/{spec.config.robot_type}.urdf"
+        path += f"/{spec.config.robot_type}/descriptions/urdf/{spec.config.robot_type}.urdf"
         spec.PybulletBridge.urdf = path
         spec.PybulletBridge.basePosition = spec.config.base_pos
         spec.PybulletBridge.baseOrientation = spec.config.base_or

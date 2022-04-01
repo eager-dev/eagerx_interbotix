@@ -37,6 +37,28 @@ You can install the package using pip:
     EAGERx depends on a minimal ROS installation. Fortunately, you **can** use eagerx anywhere as you would any python package,
     so it does **not** impose a ROS package structure on your project.
 
+Dependencies
+============
+
+We require the interbotix ros package to control the interbotix manipulators in the real world.
+
+If you do not have rosdep already installed (check with ), run the code below.
+If you use the melodic distribution, use ``python-rosdep`` instead.
+
+.. code:: shell
+    sudo apt-get install python3-rosdep
+    sudo rosdep init
+    rosdep update
+
+Reboot your computer if you had to install rosdep.
+If a previous installation attempt failed, remove the directory ``~/interbotix_ws``.
+
+.. code:: shell
+    cd ~
+    curl 'https://raw.githubusercontent.com/Interbotix/interbotix_ros_manipulators/main/interbotix_ros_xsarms/install/amd64/xsarm_amd64_install.sh' > xsarm_amd64_install.sh
+    chmod +x xsarm_amd64_install.sh
+    ./xsarm_amd64_install.sh
+
 Cite EAGERx
 ===========
 If you are using EAGERx for your scientific publications, please cite:

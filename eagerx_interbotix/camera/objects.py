@@ -70,7 +70,7 @@ class Camera(Object):
             dtype="float32",
             low=0,
             high=1,
-            shape=spec.config.render_shape,
+            shape=spec.config.render_shape + [3],
         )
 
     @staticmethod

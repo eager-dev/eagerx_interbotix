@@ -13,8 +13,12 @@ class Solid(Object):
     entity_id = "Solid"
 
     @staticmethod
-    @register.sensors(pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray)
-    @register.engine_states(pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray)
+    @register.sensors(
+        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
+    )
+    @register.engine_states(
+        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
+    )
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Solid"""
@@ -140,8 +144,12 @@ class Solid(Object):
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
         pos = EngineNode.make("LinkSensor", "pos", rate=spec.sensors.pos.rate, process=2, mode="position")
         vel = EngineNode.make("LinkSensor", "vel", rate=spec.sensors.vel.rate, process=2, mode="velocity")
-        orientation = EngineNode.make("LinkSensor", "orientation", rate=spec.sensors.orientation.rate, process=2, mode="orientation")
-        angular_vel = EngineNode.make("LinkSensor", "angular_vel", rate=spec.sensors.angular_vel.rate, process=2, mode="angular_vel")
+        orientation = EngineNode.make(
+            "LinkSensor", "orientation", rate=spec.sensors.orientation.rate, process=2, mode="orientation"
+        )
+        angular_vel = EngineNode.make(
+            "LinkSensor", "angular_vel", rate=spec.sensors.angular_vel.rate, process=2, mode="angular_vel"
+        )
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)

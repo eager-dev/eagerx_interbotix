@@ -15,6 +15,7 @@ eagerx-gui = "^0.1.4"
 eagerx-pybullet = "^0.1.1"
 eagerx-reality = "^0.1.4"
 scipy = "^1.0"
+modern_robotics = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"

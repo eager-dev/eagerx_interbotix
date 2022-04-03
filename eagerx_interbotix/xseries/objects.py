@@ -3,6 +3,7 @@ from urdf_parser_py.urdf import URDF
 from std_msgs.msg import Float32MultiArray
 
 # EAGERx IMPORTS
+from eagerx_reality.bridge import RealBridge
 from eagerx_pybullet.bridge import PybulletBridge
 from eagerx import Object, EngineNode, SpaceConverter, EngineState, Processor
 from eagerx.core.specs import ObjectSpec
@@ -32,6 +33,7 @@ class Xseries(Object):
         joint_upper=None,
         vel_limit=None,
         sleep_positions=None,
+        urdf=None,
     )
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Xseries"""
@@ -98,13 +100,15 @@ class Xseries(Object):
         base_or=None,
         self_collision=False,
         fixed_base=True,
+        motor_config=None,
+        mode_config=None,
     ):
         """Object spec of Xseries"""
         # Performs all the steps to fill-in the params with registered info about all functions.
         Xseries.initialize_spec(spec)
 
         # Extract info on xseries arm from assets
-        motor_config, mode_config = get_configs(robot_type)
+        motor_config, mode_config = get_configs(robot_type, motor_config, mode_config)
         urdf = URDF.from_parameter_server(generate_urdf(robot_type, ns="pybullet_urdf"))
 
         # Sort joint_names according to joint_order
@@ -148,6 +152,7 @@ class Xseries(Object):
         spec.config.joint_upper = joint_upper
         spec.config.vel_limit = vel_limit
         spec.config.sleep_positions = sleep_positions
+        spec.config.urdf = urdf.to_xml_string()
 
         # Add agnostic implementation
         Xseries.agnostic(spec, rate)
@@ -199,7 +204,7 @@ class Xseries(Object):
             joints=joints,
             mode="position_control",
             vel_target=len(joints)*[0.0],
-            pos_gain=len(joints)*[0.5],
+            pos_gain=len(joints)*[0.2],
             vel_gain=len(joints)*[1.5],
         )
         gripper = EngineNode.make(
@@ -224,3 +229,61 @@ class Xseries(Object):
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
+
+    @staticmethod
+    @register.bridge(entity_id, RealBridge)
+    def reality_bridge(spec: ObjectSpec, graph: EngineGraph):
+        """Engine-specific implementation (reality) of the object."""
+        # Import any object specific entities for this bridge
+        import eagerx_interbotix.xseries.real  # noqa # pylint: disable=unused-import
+
+        # Determine gripper min/max
+        # Create engine_states (no agnostic states defined in this case)
+        # todo: implement dummy engine state
+        # todo: How to set gripper with values [0., 1.]?
+        # todo: Where do we launch the driver file? In this bridge? How to launch in namespace (based on robot_name + ns)?
+        # todo: launch with spec.config.motor_config, spec.config.mode_config.
+        # todo: Create enginenodes for position, velocity sensor, position actuator.
+        # todo: test with rviz (give as a separate option?)
+        joints = spec.config.joint_names
+        spec.PybulletBridge.states.gripper = EngineState.make("PbXseriesGripper", spec.config.gripper_names, constant, scale)
+        spec.PybulletBridge.states.pos = EngineState.make("JointState", joints=joints, mode="position")
+        spec.PybulletBridge.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
+
+        # Create sensor engine nodes
+        # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
+        pos_sensor = EngineNode.make("JointSensor", "pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position")
+        vel_sensor = EngineNode.make("JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity")
+
+        # Create actuator engine nodes
+        # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
+        pos_control = EngineNode.make(
+            "JointController",
+            "pos_control",
+            rate=spec.actuators.pos_control.rate,
+            process=2,
+            joints=joints,
+            mode="position_control",
+            vel_target=len(joints)*[0.0],
+            pos_gain=len(joints)*[0.5],
+            vel_gain=len(joints)*[1.5],
+        )
+        gripper = EngineNode.make(
+            "JointController",
+            "gripper_control",
+            rate=spec.actuators.gripper_control.rate,
+            process=2,
+            joints=spec.config.gripper_names,
+            mode="position_control",
+            vel_target=[0.0, 0.0],
+            pos_gain=[1.5, 1.5],
+            vel_gain=[0.7, 0.7],
+        )
+        gripper.inputs.action.converter = Processor.make("MirrorAction", index=0, constant=constant, scale=scale)
+
+        # Connect all engine nodes
+        graph.add([pos_sensor, vel_sensor, pos_control, gripper])
+        graph.connect(source=pos_sensor.outputs.obs, sensor="pos")
+        graph.connect(source=vel_sensor.outputs.obs, sensor="vel")
+        graph.connect(actuator="pos_control", target=pos_control.inputs.action)
+        graph.connect(actuator="gripper_control", target=gripper.inputs.action)

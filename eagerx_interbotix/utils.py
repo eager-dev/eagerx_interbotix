@@ -7,18 +7,20 @@ from eagerx.utils.node_utils import launch_node
 from eagerx.utils.utils import get_param_with_blocking
 
 
-def get_configs(robot_model: str):
+def get_configs(robot_model: str, motor_config: str, mode_config: str):
     module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
     config_path = module_path + "config/"
     try:
-        with open(f"{config_path}/modes.yaml", "r") as yamlfile:
+        mode_config = mode_config if isinstance(mode_config, str) else f"{config_path}/modes.yaml"
+        with open(mode_config, "r") as yamlfile:
             mode_config = yaml.safe_load(yamlfile)
     except IOError:
         rospy.logerr(f"Mode Config File was not found in: {config_path}")
         raise
 
     try:
-        with open(f"{config_path}/{robot_model}.yaml", "r") as yamlfile:
+        motor_config = motor_config if isinstance(motor_config, str) else f"{config_path}/{robot_model}.yaml"
+        with open(motor_config, "r") as yamlfile:
             motor_config = yaml.safe_load(yamlfile)
     except IOError:
         rospy.logerr(f"Motor Config File was not found in: {config_path}")
@@ -30,7 +32,7 @@ def generate_urdf(
     robot_model: str,
     ns="",
     base_link_frame="base_link",
-    show_ar_tag=True,
+    show_ar_tag=False,
     show_gripper_bar=True,
     show_gripper_fingers=True,
     use_world_frame=True,

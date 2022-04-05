@@ -187,7 +187,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "eagerx"
-version = "0.1.11"
+version = "0.1.12"
 description = "Engine Angostic Gym Environments for Robotics"
 category = "main"
 optional = false
@@ -228,7 +228,7 @@ pyqtgraph = ">=0.11.1,<0.12.0"
 
 [[package]]
 name = "eagerx-pybullet"
-version = "0.1.1"
+version = "0.1.4"
 description = "This repository contains the eagerx_pybllet package, which allows to simulate systems with EAGERx using pybullet."
 category = "main"
 optional = false
@@ -236,7 +236,7 @@ python-versions = "^3.6.2"
 develop = true
 
 [package.dependencies]
-eagerx = "^0.1.11"
+eagerx = "^0.1.12"
 pybullet = "^3.2.1"
 
 [package.source]
@@ -1058,7 +1058,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
-content-hash = "189a693d9e8bdf4a41207e06a576574577f2b61eb9ea9313debb586691d55540"
+content-hash = "56994117cc6e8928b4475444d918558013a9b348e97031a7035f69e612d24fdd"
 
 [metadata.files]
 alabaster = [
@@ -1200,8 +1200,8 @@ docutils = [
     {file = "docutils-0.17.1.tar.gz", hash = "sha256:686577d2e4c32380bb50cbb22f575ed742d58168cee37e99117a854bcd88f125"},
 ]
 eagerx = [
-    {file = "eagerx-0.1.11-py3-none-any.whl", hash = "sha256:9b31f1ab11d89fb97da0cd8691a3ad97af2d8a3a31f2cc866ee15736fb572fc7"},
-    {file = "eagerx-0.1.11.tar.gz", hash = "sha256:b2ae4f30666e08d1f1f48751da03b84982d8d0628c4a3ce59bc81def6fb28ec5"},
+    {file = "eagerx-0.1.12-py3-none-any.whl", hash = "sha256:22fadc9bea4097c7d12bf8a87339114f5467c1974861ecda1b8c2ff96c3f7cc8"},
+    {file = "eagerx-0.1.12.tar.gz", hash = "sha256:ae039a63a8c1492cf4f6c2c06deb9950a4340c636e993426a64cfad4f9da4da3"},
 ]
 eagerx-gui = [
     {file = "eagerx_gui-0.1.4-py3-none-any.whl", hash = "sha256:75e9daf3993a6970532199320ea974229c523d7af9e393b9f79bc546d05d1590"},

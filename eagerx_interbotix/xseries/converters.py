@@ -28,7 +28,7 @@ class MirrorAction(Processor):
         self.constant = constant
 
     def convert(self, msg):
-        action = self.scale*msg.data[self.index] + self.constant
+        action = self.scale * msg.data[self.index] + self.constant
         mirrored = np.array([action, -action], dtype="float32")
         mirrored += self.offset
         return Float32MultiArray(data=mirrored)

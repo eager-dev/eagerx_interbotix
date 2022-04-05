@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict
 
-import rospy
+from collections import deque
 from urdf_parser_py.urdf import URDF
 import numpy as np
 
@@ -66,25 +66,40 @@ class SafetyFilter(Node):
         spec.config.upper = upper
         spec.config.lower = lower
         spec.config.vel_limit = vel_limit
-        spec.config.duration = duration if isinstance(duration, float) else 2. / rate
+        spec.config.duration = duration if isinstance(duration, float) else 2.0 / rate
         spec.config.checks = checks
 
         # Collision detector
         spec.config.collision = collision if isinstance(collision, dict) else None
 
         # Add converter & space_converter
-        spec.inputs.goal.space_converter = SpaceConverter.make("Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32")
-        spec.inputs.current.space_converter = SpaceConverter.make("Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32")
-        spec.outputs.filtered.space_converter = SpaceConverter.make("Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32")
+        spec.inputs.goal.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
+        )
+        spec.inputs.current.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
+        )
+        spec.outputs.filtered.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
+        )
 
-    def initialize(self, joints: List[str], upper: List[float], lower: List[float], vel_limit: List[float], duration: float, checks: int, collision: dict):
+    def initialize(
+        self,
+        joints: List[str],
+        upper: List[float],
+        lower: List[float],
+        vel_limit: List[float],
+        duration: float,
+        checks: int,
+        collision: dict,
+    ):
         self.joints = joints
         self.upper = np.array(upper, dtype="float")
         self.lower = np.array(lower, dtype="float")
         self.vel_limit = np.array(vel_limit, dtype="float")
         self.duration = duration
         self.checks = checks
-        self.dt = 1 /self.rate
+        self.dt = 1 / self.rate
 
         # Setup collision detector
         self.collision = collision
@@ -92,6 +107,7 @@ class SafetyFilter(Node):
             self.collision_check = True
             # Setup physics server for collision checking
             import pybullet
+
             if collision.get("gui", False):
                 self.col_id = pybullet.connect(pybullet.GUI)
             else:
@@ -104,8 +120,9 @@ class SafetyFilter(Node):
                 fileName = r["urdf"]
             else:  # First write to /tmp file (else pybullet cannot load urdf)
                 import uuid  # Use this to generate a unique filename
+
                 fileName = f"/tmp/{str(uuid.uuid4())}.urdf"
-                with open(fileName, 'w') as file:
+                with open(fileName, "w") as file:
                     file.write(r["urdf"])
             # Load robot
             bodies["robot"] = pybullet.loadURDF(
@@ -124,7 +141,7 @@ class SafetyFilter(Node):
             self.workspace = col.CollisionDetector(self.col_id, bodies, joints, workspace_pairs)
             # Set distance at which objects are considered in collision.
             # self.max_distance = collision.get("max_distance", 1.)
-            self.margin = collision.get("margin", 0.)
+            self.margin = collision.get("margin", 0.0)
             # self._test_collision_tester(joints)
         else:
             self.collision_check = False
@@ -146,8 +163,8 @@ class SafetyFilter(Node):
 
     @register.states()
     def reset(self):
-        self.last_safe_pose = None
-        self.last_goal_unsafe = False
+        self.safe_poses = deque(maxlen=10)
+        self.consecutive_unsafe = 0
 
     @register.inputs(goal=Float32MultiArray, current=Float32MultiArray)
     @register.outputs(filtered=Float32MultiArray, in_collision=UInt64)
@@ -157,7 +174,10 @@ class SafetyFilter(Node):
 
         # Setpoint last safe position
         if self.collision_check:
-            if self.self_collision.in_collision(q=current, margin=self.margin) and self.self_collision.get_distance().min() < 0:
+            if (
+                self.self_collision.in_collision(q=current, margin=self.margin)
+                and self.self_collision.get_distance().min() < 0
+            ):
                 # rospy.loginfo(f"[self_collision]: margin = {self.margin} | ds = {self.self_collision.get_distance().min()}")
                 in_collision = UInt64(data=1)
             elif self.workspace.in_collision(margin=self.margin) and self.workspace.get_distance().min() < 0:
@@ -165,8 +185,8 @@ class SafetyFilter(Node):
                 in_collision = UInt64(data=2)
             else:
                 in_collision = UInt64(data=0)
-                if not self.last_goal_unsafe:
-                    self.last_safe_pose = current
+                if self.consecutive_unsafe == 0:
+                    self.safe_poses.append(current)
         else:
             in_collision = UInt64(data=0)
 
@@ -179,24 +199,24 @@ class SafetyFilter(Node):
         if np.any(too_fast):
             filtered[too_fast] = current[too_fast] + np.sign(diff[too_fast]) * self.dt * self.vel_limit[too_fast]
 
-
-
         if self.collision_check:
             # Linearly interpolate for intermediate joint configurations
             t = np.linspace(self.dt / self.checks, self.dt, self.checks)
             interp = np.empty((current.shape[0], self.checks), dtype="float32")
             diff = filtered - current
             for i in range(current.shape[0]):
-                interp[i][:] = np.interp(t, [0, self.duration], [current[i], filtered[i] + diff[i] * .02])
+                interp[i][:] = np.interp(t, [0, self.duration], [current[i], filtered[i] + diff[i] * 0.02])
 
             for i in range(self.checks):
                 if self.self_collision.in_collision(q=interp[:, i], margin=self.margin):
-                    filtered = self.last_safe_pose if self.last_safe_pose is not None else current
-                    self.last_goal_unsafe = True
+                    filtered = self.safe_poses[-1] if len(self.safe_poses) > 0 else current
+                    self.consecutive_unsafe += 1
                 elif self.workspace.in_collision(margin=self.margin):
-                    self.last_goal_unsafe = True
-                    filtered = self.last_safe_pose if self.last_safe_pose is not None else current
+                    self.consecutive_unsafe += 1
+                    filtered = self.safe_poses[-1] if len(self.safe_poses) > 0 else current
+                else:
+                    self.consecutive_unsafe = 0
         else:
-            self.last_goal_unsafe = False
+            self.consecutive_unsafe = 0
             in_collision = UInt64(data=0)
-        return dict(filtered=Float32MultiArray(data=np.round(filtered, 1)), in_collision=in_collision)
+        return dict(filtered=Float32MultiArray(data=filtered), in_collision=in_collision)

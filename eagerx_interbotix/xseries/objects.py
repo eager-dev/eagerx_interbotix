@@ -58,7 +58,7 @@ class Xseries(Object):
 
         # Set actuator properties: (space_converters, rate, etc...)
         spec.actuators.pos_control.rate = rate
-        spec.actuators.gripper_control.rate = rate
+        spec.actuators.gripper_control.rate = 1
         spec.actuators.pos_control.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
@@ -191,8 +191,12 @@ class Xseries(Object):
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
-        pos_sensor = EngineNode.make("JointSensor", "pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position")
-        vel_sensor = EngineNode.make("JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity")
+        pos_sensor = EngineNode.make(
+            "JointSensor", "pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position"
+        )
+        vel_sensor = EngineNode.make(
+            "JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity"
+        )
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
@@ -203,9 +207,9 @@ class Xseries(Object):
             process=2,
             joints=joints,
             mode="position_control",
-            vel_target=len(joints)*[0.0],
-            pos_gain=len(joints)*[0.2],
-            vel_gain=len(joints)*[1.5],
+            vel_target=len(joints) * [0.0],
+            pos_gain=len(joints) * [0.2],
+            vel_gain=len(joints) * [1.5],
         )
         gripper = EngineNode.make(
             "JointController",
@@ -239,47 +243,33 @@ class Xseries(Object):
 
         # Determine gripper min/max
         # Create engine_states (no agnostic states defined in this case)
-        # todo: implement dummy engine state
-        # todo: How to set gripper with values [0., 1.]?
         # todo: Where do we launch the driver file? In this bridge? How to launch in namespace (based on robot_name + ns)?
-        # todo: launch with spec.config.motor_config, spec.config.mode_config.
-        # todo: Create enginenodes for position, velocity sensor, position actuator.
         # todo: test with rviz (give as a separate option?)
-        joints = spec.config.joint_names
-        spec.PybulletBridge.states.gripper = EngineState.make("PbXseriesGripper", spec.config.gripper_names, constant, scale)
-        spec.PybulletBridge.states.pos = EngineState.make("JointState", joints=joints, mode="position")
-        spec.PybulletBridge.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
+        spec.RealBridge.states.gripper = EngineState.make("DummyState")
+        spec.RealBridge.states.pos = EngineState.make("DummyState")
+        spec.RealBridge.states.vel = EngineState.make("DummyState")
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
-        pos_sensor = EngineNode.make("JointSensor", "pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position")
-        vel_sensor = EngineNode.make("JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity")
+        joints = spec.config.joint_names
+        pos_sensor = EngineNode.make(
+            "XseriesSensor", "pos_sensor", rate=spec.sensors.pos.rate, joints=joints, process=2, mode="position"
+        )
+        vel_sensor = EngineNode.make(
+            "XseriesSensor", "vel_sensor", rate=spec.sensors.vel.rate, joints=joints, process=2, mode="velocity"
+        )
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         pos_control = EngineNode.make(
-            "JointController",
+            "XseriesArm",
             "pos_control",
             rate=spec.actuators.pos_control.rate,
-            process=2,
             joints=joints,
-            mode="position_control",
-            vel_target=len(joints)*[0.0],
-            pos_gain=len(joints)*[0.5],
-            vel_gain=len(joints)*[1.5],
-        )
-        gripper = EngineNode.make(
-            "JointController",
-            "gripper_control",
-            rate=spec.actuators.gripper_control.rate,
             process=2,
-            joints=spec.config.gripper_names,
             mode="position_control",
-            vel_target=[0.0, 0.0],
-            pos_gain=[1.5, 1.5],
-            vel_gain=[0.7, 0.7],
         )
-        gripper.inputs.action.converter = Processor.make("MirrorAction", index=0, constant=constant, scale=scale)
+        gripper = EngineNode.make("XseriesGripper", "gripper_control", rate=spec.actuators.gripper_control.rate, process=2)
 
         # Connect all engine nodes
         graph.add([pos_sensor, vel_sensor, pos_control, gripper])

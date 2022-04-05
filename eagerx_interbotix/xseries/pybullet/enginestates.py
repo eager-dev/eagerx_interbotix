@@ -53,4 +53,5 @@ class PbXseriesGripper(EngineState):
                 jointIndices=jointIndices,
                 physicsClientId=p._client,
             )
+
         return cb

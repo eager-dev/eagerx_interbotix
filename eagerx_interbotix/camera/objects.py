@@ -1,5 +1,3 @@
-from scipy.spatial.transform import Rotation
-
 # ROS IMPORTS
 from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image
@@ -136,9 +134,9 @@ class Camera(Object):
         spec.PybulletBridge.self_collision = spec.config.self_collision
 
         # Create engine_states (no agnostic states defined in this case)
-        spec.PybulletBridge.states.pos = EngineState.make("BaseState", mode="position", link=spec.config.calibration_link)
+        spec.PybulletBridge.states.pos = EngineState.make("LinkState", mode="position", link=spec.config.calibration_link)
         spec.PybulletBridge.states.orientation = EngineState.make(
-            "BaseState", mode="orientation", link=spec.config.calibration_link
+            "LinkState", mode="orientation", link=spec.config.calibration_link
         )
 
         # Create sensor engine nodes

@@ -103,9 +103,7 @@ class CollisionDetector:
         self.ds = None
         self.col_id = col_id
         self.robot_id = bodies["robot"]
-        self.indexed_collision_pairs = index_collision_pairs(
-            self.col_id, bodies, named_collision_pairs
-        )
+        self.indexed_collision_pairs = index_collision_pairs(self.col_id, bodies, named_collision_pairs)
         self.indexed_joints = index_joints(self.col_id, self.robot_id, joints)
 
     def compute_distances(self, q=None, max_distance=1.0):
@@ -152,7 +150,7 @@ class CollisionDetector:
           margin: Distance at which objects are considered in collision.
              Default is 0.0.
         """
-        self.ds = self.compute_distances(q=q, max_distance=margin*2)
+        self.ds = self.compute_distances(q=q, max_distance=margin * 2)
         return (self.ds < margin).any()
 
     def get_distance(self):
@@ -160,7 +158,9 @@ class CollisionDetector:
 
 
 def get_robot_link_clusters(urdf, joints):
-    clusters = {j: dict(links=[], connects=[]) for j in joints}  # {nf_joint: links=["l_1", "l_2"], connects=["joint_1", "join_2"]}
+    clusters = {
+        j: dict(links=[], connects=[]) for j in joints
+    }  # {nf_joint: links=["l_1", "l_2"], connects=["joint_1", "join_2"]}
     world_cluster = "base"
     assert world_cluster not in joints, f"Cannot have a joint name '{world_cluster}'. It is a reserved joint name."
     clusters[world_cluster] = dict(links=[], connects=[])
@@ -176,7 +176,7 @@ def get_robot_link_clusters(urdf, joints):
         else:
             return find_nonfixed_parent_joint(parent_link)
 
-    for link, (parent_joint, parent_link) in urdf.parent_map.items():
+    for link, (parent_joint, _parent_link) in urdf.parent_map.items():
         nf_parent_joint = find_nonfixed_parent_joint(link)
         if urdf.link_map[link].collision is not None:
             clusters[nf_parent_joint]["links"].append(link)
@@ -185,7 +185,7 @@ def get_robot_link_clusters(urdf, joints):
             for child_joint, _ in cm[link]:
                 clusters[nf_parent_joint]["connects"].append(child_joint)
 
-    for j, cluster in clusters.items():
+    for _, cluster in clusters.items():
         cluster["connects"] = list(set(cluster["connects"]))
     return clusters
 
@@ -214,8 +214,8 @@ def get_workspace_collision_pairs(bodies, clusters):
     pairs = []
     named_bodies = [NamedCollisionObject(b) for b in bodies if b != "robot"]
     for joint, cluster in clusters.items():
-        for l in cluster["links"]:
-            nco_1 = NamedCollisionObject("robot", l)
+        for link in cluster["links"]:
+            nco_1 = NamedCollisionObject("robot", link)
             for nco_2 in named_bodies:
                 if joint == "base" and nco_2.body_name == "ground":
                     continue

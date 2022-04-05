@@ -18,7 +18,7 @@ eagerx_interbotix package
     :depth: 2
 
 What is the *eagerx_interbotix* package?
-====================================
+========================================
 This repository interfaces interbotix robots with EAGERx.
 EAGERx (Engine Agnostic Gym Environments for Robotics) enables users to easily define new tasks, switch from one sensor to another, and switch from simulation to reality with a single line of code by being invariant to the physics engine.
 `The core repository is available here <https://github.com/eager-dev/eagerx>`_.
@@ -37,8 +37,8 @@ You can install the package using pip:
     EAGERx depends on a minimal ROS installation. Fortunately, you **can** use eagerx anywhere as you would any python package,
     so it does **not** impose a ROS package structure on your project.
 
-Dependencies
-============
+Dependencies (reality only)
+===========================
 
 We require the interbotix ros package to control the interbotix manipulators in the real world.
 
@@ -51,13 +51,14 @@ If you use the melodic distribution, use ``python-rosdep`` instead.
     rosdep update
 
 Reboot your computer if you had to install rosdep.
-If a previous installation attempt failed, remove the directory ``~/interbotix_ws``.
+If a previous installation attempt failed, remove directory ``~/interbotix_ws``, before retrying.
 
 .. code:: shell
     cd ~
     curl 'https://raw.githubusercontent.com/Interbotix/interbotix_ros_manipulators/main/interbotix_ros_xsarms/install/amd64/xsarm_amd64_install.sh' > xsarm_amd64_install.sh
     chmod +x xsarm_amd64_install.sh
     ./xsarm_amd64_install.sh
+
 
 Cite EAGERx
 ===========
@@ -75,5 +76,5 @@ If you are using EAGERx for your scientific publications, please cite:
     }
 
 Acknowledgements
-=================
+================
 EAGERx is funded by the `OpenDR <https://opendr.eu/>`_ Horizon 2020 project.

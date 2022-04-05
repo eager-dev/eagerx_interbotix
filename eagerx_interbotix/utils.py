@@ -42,6 +42,7 @@ def generate_urdf(
     module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
     launch_file = module_path + "xsarm_description.launch"
     cli_args = [
+        f"module_path:={module_path}",
         f"robot_model:={robot_model}",
         f"ns:={ns}",
         f"base_link_frame:={base_link_frame}",

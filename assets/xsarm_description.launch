@@ -1,5 +1,6 @@
 <launch>
 
+  <arg name="module_path"                       default=""/>
   <arg name="ns"                                default=""/>
   <arg name="robot_model"                       default=""/>
   <arg name="robot_name"                        default="$(arg robot_model)"/>
@@ -10,7 +11,7 @@
   <arg name="use_world_frame"                   default="true"/>
   <arg name="external_urdf_loc"                 default=""/>
   <arg name="load_gazebo_configs"               default="false"/>
-  <arg name="model"                             default="$(find interbotix_xsarm_descriptions)/urdf/$(arg robot_model).urdf.xacro
+  <arg name="model"                             default="$(arg module_path)/urdf/$(arg robot_model).urdf.xacro
                                                          robot_name:=$(arg robot_name)
                                                          base_link_frame:=$(arg base_link_frame)
                                                          show_ar_tag:=$(arg show_ar_tag)

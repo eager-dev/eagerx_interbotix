@@ -17,6 +17,7 @@ eagerx-reality = "^0.1.4"
 scipy = "^1.0"
 modern_robotics = "^1.1.0"
 urdf-parser-py = "^0.0.4"
+xacro = "^1.13.3"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"

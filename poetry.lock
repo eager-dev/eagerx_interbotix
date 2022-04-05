@@ -1065,6 +1065,14 @@ secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "cer
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
+name = "xacro"
+version = "1.13.3"
+description = ""
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "zipp"
 version = "3.6.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -1079,7 +1087,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
-content-hash = "995ffec9e5f920c7c32d980e9780d31f98b0319f6b7a7fa450304b757f9ba89b"
+content-hash = "11107721ea6682bc2e06e6728253948132aab8abf7e4582674658d3979c21160"
 
 [metadata.files]
 alabaster = [
@@ -1982,6 +1990,9 @@ urdf-parser-py = [
 urllib3 = [
     {file = "urllib3-1.26.9-py2.py3-none-any.whl", hash = "sha256:44ece4d53fb1706f667c9bd1c648f5469a2ec925fcf3a776667042d645472c14"},
     {file = "urllib3-1.26.9.tar.gz", hash = "sha256:aabaf16477806a5e1dd19aa41f8c2b7950dd3c746362d7e3223dbe6de6ac448e"},
+]
+xacro = [
+    {file = "xacro-1.13.3.tar.gz", hash = "sha256:a3d27ac2860cb121d8f0049fce3322cdaa3c8a66f6d4d1031008776b5e9f5e44"},
 ]
 zipp = [
     {file = "zipp-3.6.0-py3-none-any.whl", hash = "sha256:9fe5ea21568a0a70e50f273397638d39b03353731e6cbbb3fd8502a33fec40bc"},

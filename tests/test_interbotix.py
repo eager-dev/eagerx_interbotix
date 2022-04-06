@@ -42,7 +42,7 @@ def test_interbotix(eps, num_steps, is_reactive, rtf, p):
         optical_link="camera_color_optical_frame",
         calibration_link="camera_bottom_screw_frame",
     )
-    graph.add(cam)
+    # graph.add(cam)
 
     # Create solid object
     cube = eagerx.Object.make("Solid", "cube", urdf="cube_small.urdf", rate=rate, sensors=["pos"])

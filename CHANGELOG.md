@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.3 (2022-04-08)
+### Fix
+* Implement learning routine ([`171dbe0`](https://github.com/eager-dev/eagerx_interbotix/commit/171dbe0e70225359a744346270b1ac6841def9f1))
+* Add can, update dependencies (eagerx, flake8) ([`b8fdeac`](https://github.com/eager-dev/eagerx_interbotix/commit/b8fdeac69d9d2ca6673f6c76ecbac1eaf67e7861))
+
 ## v0.1.2 (2022-04-06)
 ### Fix
 * Bump eagerx ([`f1aa1b2`](https://github.com/eager-dev/eagerx_interbotix/commit/f1aa1b28ace77a0f669d917cc83918cfa2462936))

@@ -1,4 +1,4 @@
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 import eagerx_interbotix.reset  # noqa # pylint: disable=unused-import
 import eagerx_interbotix.safety  # noqa # pylint: disable=unused-import
 import eagerx_interbotix.xseries  # noqa # pylint: disable=unused-import

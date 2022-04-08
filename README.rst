@@ -59,6 +59,22 @@ If a previous installation attempt failed, remove directory ``~/interbotix_ws``,
     chmod +x xsarm_amd64_install.sh
     ./xsarm_amd64_install.sh
 
+Real-world experiments
+======================
+After you installed the interbotix ros package, you should launch the driver.
+Open a terminal, source ``interbotix_ws/devel/setup.bash``, and run the command below.
+
+- Replace ``$ROBOT_TYPE`` with the robot model (e.g. vx300s, px150, etc..).
+
+- Replace ``$OBJ_NAME`` with the name you specified when creating the arm object spec in ``eagerx``.
+
+- Optionally, you can set ``use_sim:=True`` to use a mock arm in ``RViz``.
+
+- See `here <https://github.com/Interbotix/interbotix_ros_manipulators/blob/main/interbotix_ros_xsarms/interbotix_xsarm_control/launch/xsarm_control.launch>`_ for more options.
+
+.. code:: shell
+
+    roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=$ROBOT_TYPE robot_name:=$OBJ_NAME use_sim:=False
 
 Cite EAGERx
 ===========

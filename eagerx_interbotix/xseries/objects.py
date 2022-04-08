@@ -16,13 +16,14 @@ class Xseries(Object):
     entity_id = "Xseries"
 
     @staticmethod
-    @register.sensors(pos=Float32MultiArray, vel=Float32MultiArray)
+    @register.sensors(pos=Float32MultiArray, vel=Float32MultiArray, ee_pos=Float32MultiArray)
     @register.actuators(pos_control=Float32MultiArray, gripper_control=Float32MultiArray)
     @register.engine_states(pos=Float32MultiArray, vel=Float32MultiArray, gripper=Float32MultiArray)
     @register.config(
         robot_type=None,
         joint_names=None,
         gripper_names=None,
+        gripper_link=None,
         fixed_base=True,
         self_collision=True,
         base_pos=None,
@@ -54,6 +55,13 @@ class Xseries(Object):
             dtype="float32",
             low=[-v for v in spec.config.vel_limit],
             high=spec.config.vel_limit,
+        )
+        spec.sensors.ee_pos.rate = rate
+        spec.sensors.ee_pos.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-2, -2, 0],
+            high=[2, 2, 2],
         )
 
         # Set actuator properties: (space_converters, rate, etc...)
@@ -123,6 +131,7 @@ class Xseries(Object):
             motor_config["grippers"]["gripper"]["left_finger"],
             motor_config["grippers"]["gripper"]["right_finger"],
         ]
+        gripper_link = [l.name for l in urdf.links if "ee_gripper_link" in l.name][0]
 
         # Determine joint limits
         joint_lower, joint_upper, vel_limit = [], [], []
@@ -142,6 +151,7 @@ class Xseries(Object):
         spec.config.robot_type = robot_type
         spec.config.joint_names = joint_names
         spec.config.gripper_names = gripper_names
+        spec.config.gripper_link = gripper_link
         spec.config.base_pos = base_pos if base_pos else [0, 0, 0]
         spec.config.base_or = base_or if base_or else [0, 0, 0, 1]
         spec.config.self_collision = self_collision
@@ -197,6 +207,14 @@ class Xseries(Object):
         vel_sensor = EngineNode.make(
             "JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity"
         )
+        ee_pos_sensor = EngineNode.make(
+            "LinkSensor",
+            "ee_pos_sensor",
+            rate=spec.sensors.ee_pos.rate,
+            process=2,
+            links=[spec.config.gripper_link],
+            mode="position",
+        )
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
@@ -225,9 +243,10 @@ class Xseries(Object):
         gripper.inputs.action.converter = Processor.make("MirrorAction", index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, pos_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, pos_control, gripper])
         graph.connect(source=pos_sensor.outputs.obs, sensor="pos")
         graph.connect(source=vel_sensor.outputs.obs, sensor="vel")
+        graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)
 

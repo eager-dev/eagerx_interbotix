@@ -10,23 +10,23 @@ documentation = "https://eagerx.readthedocs.io/en/master/"
 include = ["assets"]
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
-eagerx-gui = "^0.1.4"
-eagerx-pybullet = "^0.1.4"
-eagerx-reality = "^0.1.4"
+python = "^3.8"
+eagerx-gui = "^0.1.5"
+eagerx-pybullet = "^0.1.5"
+eagerx-reality = "^0.1.5"
 scipy = "^1.0"
 modern_robotics = "^1.1.0"
 urdf-parser-py = "^0.0.4"
 xacro = "^1.13.3"
+stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
 pytest-timeout = "^2.1.0"
-flake8 = "^4.0.1"
+flake8= ">=3"
 flake8-bugbear = "^22.3.23"
-#eagerx-pybullet = {path = "../eagerx_pybullet", develop = true}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

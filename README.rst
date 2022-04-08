@@ -42,22 +42,27 @@ Dependencies (reality only)
 
 We require the interbotix ros package to control the interbotix manipulators in the real world.
 
-If you do not have rosdep already installed (check with ), run the code below.
+If you do not have rosdep already installed (check if your shell recognizes the command ``rosdep -help``), run the code below.
 If you use the melodic distribution, use ``python-rosdep`` instead.
 
 .. code:: shell
+
     sudo apt-get install python3-rosdep
     sudo rosdep init
     rosdep update
 
 Reboot your computer if you had to install rosdep.
-If a previous installation attempt failed, remove directory ``~/interbotix_ws``, before retrying.
+
+Then install the package by typing:
 
 .. code:: shell
-    cd ~
-    curl 'https://raw.githubusercontent.com/Interbotix/interbotix_ros_manipulators/main/interbotix_ros_xsarms/install/amd64/xsarm_amd64_install.sh' > xsarm_amd64_install.sh
-    chmod +x xsarm_amd64_install.sh
-    ./xsarm_amd64_install.sh
+
+        cd ~
+        curl 'https://raw.githubusercontent.com/Interbotix/interbotix_ros_manipulators/main/interbotix_ros_xsarms/install/amd64/xsarm_amd64_install.sh' > xsarm_amd64_install.sh
+        chmod +x xsarm_amd64_install.sh
+        ./xsarm_amd64_install.sh
+
+If a previous installation attempt failed, remove directory ``~/interbotix_ws``, before retrying.
 
 Real-world experiments
 ======================

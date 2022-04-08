@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "eagerx_interbotix"
-version = "0.1.2"
+version = "0.1.3"
 license = "Apache2.0"
 description = "EAGERx interface to interbotix robot arms."
 authors = ["Jelle Luijkx <j.d.luijkx@tudelft.nl>", "Bas van der Heijden <d.s.vanderheijden@tudelft.nl>"]

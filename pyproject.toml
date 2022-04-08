@@ -11,7 +11,7 @@ include = ["assets"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-eagerx-gui = "^0.1.5"
+eagerx-gui = "^0.2.0"
 eagerx-pybullet = "^0.1.5"
 eagerx-reality = "^0.1.5"
 scipy = "^1.0"

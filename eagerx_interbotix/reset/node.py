@@ -81,7 +81,7 @@ class ResetArm(ResetNode):
     @register.inputs(joints=Float32MultiArray, in_collision=UInt64)
     @register.targets(goal=Float32MultiArray)
     @register.outputs(joints=Float32MultiArray, gripper=Float32MultiArray)
-    def callback(self, t_n: float, goal: Msg = None, joints: Msg = None, gripper: Msg = None, in_collision: Msg = None):
+    def callback(self, t_n: float, goal: Msg = None, joints: Msg = None, in_collision: Msg = None):
         if self.start is None:
             self.start = t_n
 

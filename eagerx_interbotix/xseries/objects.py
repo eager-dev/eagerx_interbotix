@@ -131,7 +131,7 @@ class Xseries(Object):
             motor_config["grippers"]["gripper"]["left_finger"],
             motor_config["grippers"]["gripper"]["right_finger"],
         ]
-        gripper_link = [l.name for l in urdf.links if "ee_gripper_link" in l.name][0]
+        gripper_link = [link.name for link in urdf.links if "ee_gripper_link" in link.name][0]
 
         # Determine joint limits
         joint_lower, joint_upper, vel_limit = [], [], []

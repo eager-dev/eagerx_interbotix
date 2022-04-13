@@ -66,3 +66,21 @@ def exclude_ground(client_id):
         "ground": ground_id,
     }
     return bodies
+
+
+def exclude_ground_minus_2m(client_id):
+    pyb.setAdditionalSearchPath(pybullet_data.getDataPath(), physicsClientId=client_id)
+
+    # ground plane
+    ground_id = pyb.loadURDF(
+        "plane.urdf",
+        [0, 0, -2],
+        useFixedBase=True,
+        physicsClientId=client_id,
+    )
+
+    # store body indices in a dict with more convenient key names
+    bodies = {
+        "ground": ground_id,
+    }
+    return bodies

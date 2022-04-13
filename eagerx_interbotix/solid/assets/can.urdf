@@ -3,10 +3,10 @@
 
 	<link name="can">
 		<contact>
-			<lateral_friction value="0.1"/>
+			<lateral_friction value="0.3"/>
       		<rolling_friction value="0.0"/>
       		<contact_cfm value="0.0"/>
-      		<contact_erp value="1.0"/>
+      		<contact_erp value="0.2"/>
     	</contact>
 
 		<inertial>

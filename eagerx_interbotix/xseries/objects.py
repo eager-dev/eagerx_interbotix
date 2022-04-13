@@ -17,7 +17,7 @@ class Xseries(Object):
 
     @staticmethod
     @register.sensors(pos=Float32MultiArray, vel=Float32MultiArray, ee_pos=Float32MultiArray)
-    @register.actuators(pos_control=Float32MultiArray, gripper_control=Float32MultiArray)
+    @register.actuators(pos_control=Float32MultiArray, vel_control=Float32MultiArray, gripper_control=Float32MultiArray)
     @register.engine_states(pos=Float32MultiArray, vel=Float32MultiArray, gripper=Float32MultiArray)
     @register.config(
         robot_type=None,
@@ -66,7 +66,14 @@ class Xseries(Object):
 
         # Set actuator properties: (space_converters, rate, etc...)
         spec.actuators.pos_control.rate = rate
+        spec.actuators.vel_control.rate = rate
         spec.actuators.gripper_control.rate = 1
+        spec.actuators.vel_control.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-v for v in spec.config.vel_limit],
+            high=spec.config.vel_limit,
+        )
         spec.actuators.pos_control.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
@@ -199,6 +206,10 @@ class Xseries(Object):
         spec.PybulletBridge.states.pos = EngineState.make("JointState", joints=joints, mode="position")
         spec.PybulletBridge.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
 
+        # Fix gripper if we are not controlling it.
+        if 'gripper_control' not in spec.config.actuators:
+            spec.PybulletBridge.states.gripper.fixed = True
+
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
         pos_sensor = EngineNode.make(
@@ -226,8 +237,19 @@ class Xseries(Object):
             joints=joints,
             mode="position_control",
             vel_target=len(joints) * [0.0],
-            pos_gain=len(joints) * [0.2],
-            vel_gain=len(joints) * [1.5],
+            pos_gain=len(joints) * [0.5],
+            vel_gain=len(joints) * [1.0],
+            max_force=len(joints) * [3.0],
+        )
+        vel_control = EngineNode.make(
+            "JointController",
+            "vel_control",
+            rate=spec.actuators.pos_control.rate,
+            process=2,
+            joints=joints,
+            mode="velocity_control",
+            vel_gain=len(joints) * [1.0],
+            max_force=len(joints) * [2.0],
         )
         gripper = EngineNode.make(
             "JointController",
@@ -237,17 +259,19 @@ class Xseries(Object):
             joints=spec.config.gripper_names,
             mode="position_control",
             vel_target=[0.0, 0.0],
-            pos_gain=[1.5, 1.5],
-            vel_gain=[0.7, 0.7],
+            pos_gain=[0.5, 0.5],
+            vel_gain=[1.0, 1.0],
+            max_force=[2.0, 2.0],
         )
         gripper.inputs.action.converter = Processor.make("MirrorAction", index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, pos_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, pos_control, vel_control, gripper])
         graph.connect(source=pos_sensor.outputs.obs, sensor="pos")
         graph.connect(source=vel_sensor.outputs.obs, sensor="vel")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
+        graph.connect(actuator="vel_control", target=vel_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)
 
         # Check graph validity (commented out)

@@ -1,5 +1,5 @@
 # ROS IMPORTS
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Float32
 
 # EAGERx IMPORTS
 from eagerx_pybullet.bridge import PybulletBridge
@@ -17,7 +17,8 @@ class Solid(Object):
         pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
     )
     @register.engine_states(
-        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
+        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray,
+        lateral_friction=Float32
     )
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
@@ -85,6 +86,14 @@ class Solid(Object):
             high=[0, 0, 0],
         )
 
+        # Dynamics
+        spec.states.lateral_friction.space_converter = SpaceConverter.make(
+            "Space_Float32",
+            dtype="float32",
+            low=0.1,
+            high=0.5,
+        )
+
     @staticmethod
     @register.spec(entity_id, Object)
     def spec(
@@ -139,6 +148,7 @@ class Solid(Object):
         spec.PybulletBridge.states.vel = EngineState.make("LinkState", mode="velocity")
         spec.PybulletBridge.states.orientation = EngineState.make("LinkState", mode="orientation")
         spec.PybulletBridge.states.angular_vel = EngineState.make("LinkState", mode="angular_vel")
+        spec.PybulletBridge.states.lateral_friction = EngineState.make("PbDynamics", property="lateralFriction")
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)

@@ -9,19 +9,16 @@ import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
 
 # Other
 import numpy as np
+import gym.wrappers as w
 import stable_baselines3 as sb
-from datetime import datetime
 import os
 
-NAME = "varyGoal_term_noExcl"
-LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
-
-# todo: increase friction coefficient (seems to glide too much)
-# todo: velocity control
-# todo: Increase the penalty on velocity
-# todo: switch goal with object position
-# todo: normalize actions/observations
-
+# NAME = "dynamicsRandomization_2022-04-13-1240"
+# STEPS = 700000
+NAME = "better_velControl_highCtrlCost_normalized_2022-04-12-1610"
+STEPS = 900000
+MODEL_NAME = f"{NAME}/model_{STEPS}"
+LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{MODEL_NAME}"
 if __name__ == "__main__":
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
@@ -29,38 +26,41 @@ if __name__ == "__main__":
     real_reset = False
     rate = 20
     safe_rate = 20
-    max_steps = 300
+    max_steps = 200
 
     # Initialize empty graph
     graph = Graph.create()
 
     # Create camera
-    cam = eagerx.Object.make(
-        "Camera",
-        "cam",
-        rate=rate,
-        sensors=["rgb"],
-        urdf=os.path.dirname(eagerx_interbotix.__file__) + "/camera/assets/realsense2_d435.urdf",
-        optical_link="camera_color_optical_frame",
-        calibration_link="camera_bottom_screw_frame",
-    )
+    # cam = eagerx.Object.make(
+    #     "Camera",
+    #     "cam",
+    #     rate=rate,
+    #     sensors=["rgb"],
+    #     urdf=os.path.dirname(eagerx_interbotix.__file__) + "/camera/assets/realsense2_d435.urdf",
+    #     optical_link="camera_color_optical_frame",
+    #     calibration_link="camera_bottom_screw_frame",
+    # )
     # graph.add(cam)
 
     # Create solid object
     urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
     solid = eagerx.Object.make(
-        "Solid", "solid", urdf=urdf_path + "can.urdf", rate=rate, sensors=["pos"], base_pos=[0, 0, 1], fixed_base=False
+        "Solid", "solid", urdf=urdf_path + "can.urdf", rate=rate, sensors=["pos"], base_pos=[0, 0, 1], fixed_base=False,
+        states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
     )
     solid.sensors.pos.space_converter.low = [0, -1, 0]
     solid.sensors.pos.space_converter.high = [1, 1, 0.15]
+    solid.states.lateral_friction.space_converter.low = 0.4
+    solid.states.lateral_friction.space_converter.high = 0.1
     graph.add(solid)
 
     # Create solid goal
     goal = eagerx.Object.make(
         "Solid", "goal", urdf=urdf_path + "can_goal.urdf", rate=rate, sensors=["pos"], base_pos=[1, 0, 1], fixed_base=True
     )
-    goal.sensors.pos.space_converter.low = [0.25, 0, 0]
-    goal.sensors.pos.space_converter.high = [0.35, 0, 0.15]
+    goal.sensors.pos.space_converter.low = [0, -1, 0]
+    goal.sensors.pos.space_converter.high = [1, 1, 0.15]
     graph.add(goal)
 
     # Create arm
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         "viper",
         "vx300s",
         sensors=["pos", "vel", "ee_pos"],
-        actuators=["pos_control", "gripper_control"],
+        actuators=["vel_control"],
         states=["pos", "vel", "gripper"],
         rate=rate,
     )
@@ -85,14 +85,14 @@ if __name__ == "__main__":
         robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
     )
     safe = eagerx.Node.make(
-        "SafePositionControl",
+        "SafeVelocityControl",
         "safety",
         safe_rate,
         c.joint_names,
         c.joint_upper,
         c.joint_lower,
-        [0.3 * vl for vl in c.vel_limit],
-        checks=5,
+        [0.2 * vl for vl in c.vel_limit],
+        checks=3,
         collision=collision,
     )
     graph.add(safe)
@@ -104,41 +104,15 @@ if __name__ == "__main__":
     graph.connect(source=solid.sensors.pos, observation="solid")
     graph.connect(source=goal.sensors.pos, observation="goal")
     # Connecting actions
-    graph.connect(action="joints", target=safe.inputs.goal)
-    graph.connect(action="gripper", target=arm.actuators.gripper_control)
+    graph.connect(action="velocity", target=safe.inputs.goal)
     # Connecting safety filter to arm
-    graph.connect(source=arm.sensors.pos, target=safe.inputs.current)
-    graph.connect(source=safe.outputs.filtered, target=arm.actuators.pos_control)
-
-    # Create reset node
-    if real_reset:
-        reset = eagerx.ResetNode.make("ResetArm", "reset", rate, c.joint_upper, c.joint_lower, gripper=True)
-        graph.add(reset)
-
-        # Disconnect simulation-specific connections
-        graph.disconnect(action="joints", target=safe.inputs.goal)
-        graph.disconnect(action="gripper", target=arm.actuators.gripper_control)
-
-        # Connect target state we are resetting
-        graph.connect(source=arm.states.pos, target=reset.targets.goal)
-        # Connect actions to feedthrough (that are overwritten during a reset)
-        graph.connect(action="gripper", target=reset.feedthroughs.gripper)
-        graph.connect(action="joints", target=reset.feedthroughs.joints)
-        # Connect joint output to safety filter
-        graph.connect(source=reset.outputs.joints, target=safe.inputs.goal)
-        graph.connect(source=reset.outputs.gripper, target=arm.actuators.gripper_control)
-        # Connect inputs to determine reset status
-        graph.connect(source=arm.sensors.pos, target=reset.inputs.joints)
-        graph.connect(source=safe.outputs.in_collision, target=reset.inputs.in_collision, skip=True)
-
-    # if velocity_control:
-
-    # Show in the gui
-    # graph.gui()
+    graph.connect(source=arm.sensors.pos, target=safe.inputs.position)
+    graph.connect(source=arm.sensors.vel, target=safe.inputs.velocity)
+    graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, is_reactive=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, is_reactive=True, real_time_factor=0.0)
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, is_reactive=True, real_time_factor=1.0)
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -149,13 +123,17 @@ if __name__ == "__main__":
         goal = obs["goal"][0]
         can = obs["solid"][0]
         vel = obs["velocity"][0]
+        des_vel = action["velocity"]
         # Penalize distance of the end-effector to the object
         rwd_near = 0.4 * -abs(np.linalg.norm(ee_pos - can) - 0.033)
-        # Penalize distance of the objec to the goal
-        rwd_dist = 1.0 * -np.linalg.norm(goal - can)
+        # Penalize distance of the object to the goal
+        rwd_dist = 2.0 * -np.linalg.norm(goal - can)
         # Penalize actions (indirectly, by punishing the angular velocity.
-        rwd_ctrl = 0.1 * -np.square(vel).sum()
+        rwd_ctrl = 0.1 * -np.linalg.norm(des_vel - vel)
         rwd = rwd_dist + rwd_ctrl + rwd_near
+        # Print rwd build-up
+        # msg = f"rwd={rwd: .2f} | near={100*rwd_near/rwd: .1f} | dist={100*rwd_dist/rwd: .1f} | ctrl={100*rwd_ctrl/rwd: .1f}"
+        # print(msg)
         # Determine done flag
         if steps > max_steps:  # Max steps reached
             done = True
@@ -167,6 +145,7 @@ if __name__ == "__main__":
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
         return obs, rwd, done, info
 
+
     # Define reset function
     def reset_fn(env):
         states = env.state_space.sample()
@@ -174,7 +153,6 @@ if __name__ == "__main__":
         # Sample new starting state (at least 17 cm from goal)
         radius = 0.17
         z = 0.03
-        goal_pos = np.array([0.20, 0, z])
         while True:
             can_pos = np.concatenate(
                 [
@@ -185,23 +163,21 @@ if __name__ == "__main__":
             )
             if np.linalg.norm(can_pos) > radius:
                 break
-        states["solid/pos"] = can_pos + goal_pos
-        states["goal/pos"] = goal_pos
+        states["solid/pos"] = np.array([0.4, -0.2, z])
+        y = np.random.uniform(low=0, high=0.3)
+        states["goal/pos"] = np.array([0.4, y, z])
+
+        # Set gripper to closed position
+        states["viper/gripper"][0] = 0
         return states
 
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+    env = Flatten(env)
+    env = w.rescale_action.RescaleAction(env, min_action=-1.5, max_action=1.5)
 
-    # # Initialize model
-    # os.mkdir(LOG_DIR)
-    # graph.save(f"{LOG_DIR}/graph.yaml")
-    # model = sb.SAC("MlpPolicy", Flatten(env), device="cuda", verbose=1, tensorboard_log=LOG_DIR)
-    #
-    # # Create experiment directory
-    # delta_steps = 30000
-    # for i in range(1, 30):
-    #     model.learn(delta_steps)
-    #     model.save(f"{LOG_DIR}/model_{i*delta_steps}")
+    # Initialize model
+    model = sb.SAC.load(LOG_DIR, env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
 
     # First train in simulation
     env.render("human")
@@ -209,8 +185,8 @@ if __name__ == "__main__":
     # Evaluate
     for eps in range(5000):
         print(f"Episode {eps}")
-        _, done = env.reset(), False
+        obs, done = env.reset(), False
         while not done:
-            action = env.action_space.sample()
+            action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")

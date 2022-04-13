@@ -263,22 +263,8 @@ tabulate = ">=0.8.9,<0.9.0"
 termcolor = ">=1.1.0,<2.0.0"
 
 [[package]]
-name = "eagerx-gui"
-version = "0.2.0"
-description = "GUI to visualise graphs in EAGERx."
-category = "main"
-optional = false
-python-versions = ">=3.8,<4.0"
-
-[package.dependencies]
-eagerx = ">=0.1.14,<0.2.0"
-opencv-python = ">=4.5,<5.0"
-PyQt6 = ">=6.2.3,<7.0.0"
-pyqtgraph = ">=0.12.4,<0.13.0"
-
-[[package]]
 name = "eagerx-pybullet"
-version = "0.1.5"
+version = "0.1.6"
 description = "This repository contains the eagerx_pybllet package, which allows to simulate systems with EAGERx using pybullet."
 category = "main"
 optional = false
@@ -329,7 +315,7 @@ dev = ["coverage", "hypothesis", "hypothesmith (>=0.2)", "pre-commit"]
 
 [[package]]
 name = "fonttools"
-version = "4.31.2"
+version = "4.32.0"
 description = "Tools to manipulate font files"
 category = "main"
 optional = false
@@ -350,7 +336,7 @@ woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
 
 [[package]]
 name = "google-auth"
-version = "2.6.3"
+version = "2.6.4"
 description = "Google Authentication Library"
 category = "main"
 optional = false
@@ -430,7 +416,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "imageio"
-version = "2.16.1"
+version = "2.16.2"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 category = "main"
 optional = false
@@ -479,7 +465,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 
 [[package]]
 name = "importlib-resources"
-version = "5.6.0"
+version = "5.7.0"
 description = "Read resources from Python packages"
 category = "main"
 optional = false
@@ -614,7 +600,7 @@ python-versions = "*"
 
 [[package]]
 name = "networkx"
-version = "2.7.1"
+version = "2.8"
 description = "Python package for creating and manipulating graphs and networks"
 category = "main"
 optional = false
@@ -622,10 +608,10 @@ python-versions = ">=3.8"
 
 [package.extras]
 default = ["numpy (>=1.19)", "scipy (>=1.8)", "matplotlib (>=3.4)", "pandas (>=1.3)"]
-developer = ["black (==22.1)", "pyupgrade (>=2.31)", "pre-commit (>=2.17)", "mypy (>=0.931)"]
-doc = ["sphinx (>=4.4)", "pydata-sphinx-theme (>=0.8)", "sphinx-gallery (>=0.10)", "numpydoc (>=1.2)", "pillow (>=9.0)", "nb2plots (>=0.6)", "texext (>=0.6.6)"]
-extra = ["lxml (>=4.6)", "pygraphviz (>=1.9)", "pydot (>=1.4.2)"]
-test = ["pytest (>=7.0)", "pytest-cov (>=3.0)", "codecov (>=2.1)"]
+developer = ["pre-commit (>=2.18)", "mypy (>=0.942)"]
+doc = ["sphinx (>=4.5)", "pydata-sphinx-theme (>=0.8.1)", "sphinx-gallery (>=0.10)", "numpydoc (>=1.2)", "pillow (>=9.1)", "nb2plots (>=0.6)", "texext (>=0.6.6)"]
+extra = ["lxml (>=4.6)", "pygraphviz (>=1.9)", "pydot (>=1.4.2)", "sympy (>=1.10)"]
+test = ["pytest (>=7.1)", "pytest-cov (>=3.0)", "codecov (>=2.1)"]
 
 [[package]]
 name = "numpy"
@@ -828,53 +814,14 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "pyparsing"
-version = "3.0.7"
-description = "Python parsing module"
+version = "3.0.8"
+description = "pyparsing module - Classes and methods to define and execute parsing grammars"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.6.8"
 
 [package.extras]
-diagrams = ["jinja2", "railroad-diagrams"]
-
-[[package]]
-name = "pyqt6"
-version = "6.2.3"
-description = "Python bindings for the Qt cross platform application toolkit"
-category = "main"
-optional = false
-python-versions = ">=3.6.1"
-
-[package.dependencies]
-PyQt6-Qt6 = ">=6.2.3"
-PyQt6-sip = ">=13.2,<14"
-
-[[package]]
-name = "pyqt6-qt6"
-version = "6.2.4"
-description = "The subset of a Qt installation needed by PyQt6."
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
-name = "pyqt6-sip"
-version = "13.2.1"
-description = "The sip module support for PyQt6"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[[package]]
-name = "pyqtgraph"
-version = "0.12.4"
-description = "Scientific Graphics and GUI Library for Python"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[package.dependencies]
-numpy = ">=1.17.0"
+diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
 name = "pytest"
@@ -1126,18 +1073,18 @@ test = ["pytest", "pytest-cov", "html5lib", "cython", "typed-ast"]
 
 [[package]]
 name = "sphinx-autodoc-typehints"
-version = "1.17.0"
+version = "1.18.1"
 description = "Type hints (PEP 484) support for the Sphinx autodoc extension"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 
 [package.dependencies]
-Sphinx = ">=4"
+Sphinx = ">=4.5"
 
 [package.extras]
-testing = ["covdefaults (>=2)", "coverage (>=6)", "diff-cover (>=6.4)", "nptyping (>=1)", "pytest (>=6)", "pytest-cov (>=3)", "sphobjinv (>=2)", "typing-extensions (>=3.5)"]
-type_comments = ["typed-ast (>=1.4.0)"]
+testing = ["covdefaults (>=2.2)", "coverage (>=6.3)", "diff-cover (>=6.4)", "nptyping (>=2)", "pytest (>=7.1)", "pytest-cov (>=3)", "sphobjinv (>=2)", "typing-extensions (>=4.1)"]
+type_comments = ["typed-ast (>=1.5.2)"]
 
 [[package]]
 name = "sphinx-rtd-theme"
@@ -1310,7 +1257,7 @@ python-versions = "*"
 
 [[package]]
 name = "tifffile"
-version = "2022.3.25"
+version = "2022.4.8"
 description = "Read and write TIFF files"
 category = "main"
 optional = false
@@ -1425,7 +1372,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "6cc4c6558923843bfd11e3ce623b75563e35bded3c86c4f131731a3f33decef7"
+content-hash = "6a0afd4d3376c137e594153bd602b99bd764939fcac1fbdf601b585423810f84"
 
 [metadata.files]
 absl-py = [
@@ -1588,13 +1535,9 @@ eagerx = [
     {file = "eagerx-0.1.14-py3-none-any.whl", hash = "sha256:6338fae72766314c98aa6a0dcf7b68838453c8a098df1d1f8343070a6ddbd59d"},
     {file = "eagerx-0.1.14.tar.gz", hash = "sha256:e2b0c30797bf416d35f7e0338fd2124942e2e06b464ce44faf24edaa9187649d"},
 ]
-eagerx-gui = [
-    {file = "eagerx_gui-0.2.0-py3-none-any.whl", hash = "sha256:5edab504d8bd4366981dd3c4a173ce9e3ebf6d0d8cfe9fea1ddbe7761c60a74d"},
-    {file = "eagerx_gui-0.2.0.tar.gz", hash = "sha256:0f52efce9b4df0cbc2d9fa9e718c664f6076920f1d10c8d3dd8a863728d2e909"},
-]
 eagerx-pybullet = [
-    {file = "eagerx_pybullet-0.1.5-py3-none-any.whl", hash = "sha256:6c5b599e25272af64759d73c0bd30a00c949a43966152f40175db6c89d761d9b"},
-    {file = "eagerx_pybullet-0.1.5.tar.gz", hash = "sha256:3f56fe393b410840a7b24d981cfe98042121da01c949c67614057f67e91894f9"},
+    {file = "eagerx_pybullet-0.1.6-py3-none-any.whl", hash = "sha256:f096c011763aafc0551dad231c30f6bc45ac1ed0b18caaeeb382f302cabcba21"},
+    {file = "eagerx_pybullet-0.1.6.tar.gz", hash = "sha256:94a94a34fe85968b44ffafa3ce72e529f90d45f462e8282a8e1f35d96615b691"},
 ]
 eagerx-reality = [
     {file = "eagerx_reality-0.1.5-py3-none-any.whl", hash = "sha256:b8890b054216d5ddffe3ed301f4a4b43ac6e695454f4173f5c04cbbaf9e1e958"},
@@ -1609,12 +1552,12 @@ flake8-bugbear = [
     {file = "flake8_bugbear-22.3.23-py3-none-any.whl", hash = "sha256:ec5ec92195720cee1589315416b844ffa5e82f73a78e65329e8055322df1e939"},
 ]
 fonttools = [
-    {file = "fonttools-4.31.2-py3-none-any.whl", hash = "sha256:2df636a3f402ef14593c6811dac0609563b8c374bd7850e76919eb51ea205426"},
-    {file = "fonttools-4.31.2.zip", hash = "sha256:236b29aee6b113e8f7bee28779c1230a86ad2aac9a74a31b0aedf57e7dfb62a4"},
+    {file = "fonttools-4.32.0-py3-none-any.whl", hash = "sha256:b038d1a0dee0079de7ade57071e2e2aced6e35bd697de244ac62938b2b1628c1"},
+    {file = "fonttools-4.32.0.zip", hash = "sha256:59a90de72149893167e3d552ae2402c6874e006b9adc3feaf5f6d706fe20d392"},
 ]
 google-auth = [
-    {file = "google-auth-2.6.3.tar.gz", hash = "sha256:d65bb0e3701eaaa64fd2aa85e1325580524b0bddc6dc5db3ab89c481b6a20141"},
-    {file = "google_auth-2.6.3-py2.py3-none-any.whl", hash = "sha256:5e079eb4d21df1853d55cf2b6766b77ef36f7f7bdaf7d4a70434aa97c7578d60"},
+    {file = "google-auth-2.6.4.tar.gz", hash = "sha256:1a8c2c70c070b72fe038e2eb20072e5b4f0fd8ca1875e8fafe7f71b689a8d572"},
+    {file = "google_auth-2.6.4-py2.py3-none-any.whl", hash = "sha256:4dacb91d8a15b7755fc08688576481bd9c37cfac9842289469cf000d557f8962"},
 ]
 google-auth-oauthlib = [
     {file = "google-auth-oauthlib-0.4.6.tar.gz", hash = "sha256:a90a072f6993f2c327067bf65270046384cda5a8ecb20b94ea9a687f1f233a7a"},
@@ -1684,8 +1627,8 @@ idna = [
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
 ]
 imageio = [
-    {file = "imageio-2.16.1-py3-none-any.whl", hash = "sha256:d8d17c59b6f5f3b350bbbe346e7cb7dda0399b1881d93ad01cb29b5acdb24c42"},
-    {file = "imageio-2.16.1.tar.gz", hash = "sha256:7f123cb23a77ac5abe8ed4e7ad6a60831a82de2c5d123463dcf1d4278c4779d2"},
+    {file = "imageio-2.16.2-py3-none-any.whl", hash = "sha256:4757b5bc41158feb89529721bc14b738c3a0e17284dbdfc3f09ac4ad9dc00a08"},
+    {file = "imageio-2.16.2.tar.gz", hash = "sha256:8fea761d51a53c150cabd82ed36011252c17580c752216b8222f078630dfb9ba"},
 ]
 imagesize = [
     {file = "imagesize-1.3.0-py2.py3-none-any.whl", hash = "sha256:1db2f82529e53c3e929e8926a1fa9235aa82d0bd0c580359c67ec31b2fddaa8c"},
@@ -1696,8 +1639,8 @@ importlib-metadata = [
     {file = "importlib_metadata-4.11.3.tar.gz", hash = "sha256:ea4c597ebf37142f827b8f39299579e31685c31d3a438b59f469406afd0f2539"},
 ]
 importlib-resources = [
-    {file = "importlib_resources-5.6.0-py3-none-any.whl", hash = "sha256:a9dd72f6cc106aeb50f6e66b86b69b454766dd6e39b69ac68450253058706bcc"},
-    {file = "importlib_resources-5.6.0.tar.gz", hash = "sha256:1b93238cbf23b4cde34240dd8321d99e9bf2eb4bc91c0c99b2886283e7baad85"},
+    {file = "importlib_resources-5.7.0-py3-none-any.whl", hash = "sha256:9c4c12f9ef4329a00c1f72f30bddb4f10e582766b8705980bb76356b3ba8bc91"},
+    {file = "importlib_resources-5.7.0.tar.gz", hash = "sha256:f6a4a9949f36ae289facec8dac1a899a54cbaf6a135cc8552d2c8b69209c06a3"},
 ]
 iniconfig = [
     {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
@@ -1942,8 +1885,8 @@ netifaces = [
     {file = "netifaces-0.11.0.tar.gz", hash = "sha256:043a79146eb2907edf439899f262b3dfe41717d34124298ed281139a8b93ca32"},
 ]
 networkx = [
-    {file = "networkx-2.7.1-py3-none-any.whl", hash = "sha256:011e85d277c89681e8fa661cf5ff0743443445049b0b68789ad55ef09340c6e0"},
-    {file = "networkx-2.7.1.tar.gz", hash = "sha256:d1194ba753e5eed07cdecd1d23c5cd7a3c772099bd8dbd2fea366788cf4de7ba"},
+    {file = "networkx-2.8-py3-none-any.whl", hash = "sha256:1a1e8fe052cc1b4e0339b998f6795099562a264a13a5af7a32cad45ab9d4e126"},
+    {file = "networkx-2.8.tar.gz", hash = "sha256:4a52cf66aed221955420e11b3e2e05ca44196b4829aab9576d4d439212b0a14f"},
 ]
 numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:92bfa69cfbdf7dfc3040978ad09a48091143cffb778ec3b03fa170c494118d75"},
@@ -2180,42 +2123,8 @@ pygments = [
     {file = "Pygments-2.11.2.tar.gz", hash = "sha256:4e426f72023d88d03b2fa258de560726ce890ff3b630f88c21cbb8b2503b8c6a"},
 ]
 pyparsing = [
-    {file = "pyparsing-3.0.7-py3-none-any.whl", hash = "sha256:a6c06a88f252e6c322f65faf8f418b16213b51bdfaece0524c1c1bc30c63c484"},
-    {file = "pyparsing-3.0.7.tar.gz", hash = "sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea"},
-]
-pyqt6 = [
-    {file = "PyQt6-6.2.3-cp36-abi3-macosx_10_14_universal2.whl", hash = "sha256:577334c9d4518022a4cb6f9799dfbd1b996167eb31404b5a63d6c43d603e6418"},
-    {file = "PyQt6-6.2.3-cp36-abi3-manylinux1_x86_64.whl", hash = "sha256:8a2f357b86fec8598f52f16d5f93416931017ca1986d5f68679c9565bfc21fff"},
-    {file = "PyQt6-6.2.3-cp36-abi3-win_amd64.whl", hash = "sha256:11c039b07962b29246de2da0912f4f663786185fd74d48daac7a270a43c8d92a"},
-    {file = "PyQt6-6.2.3.tar.gz", hash = "sha256:a9bfcac198fe4b703706f809bb686c7cef5f60a7c802fc145c6b57929c7a6a34"},
-]
-pyqt6-qt6 = [
-    {file = "PyQt6_Qt6-6.2.4-py3-none-macosx_10_14_x86_64.whl", hash = "sha256:48bc5b7400d6bca13d8c0a145f82295a6da317952ee1a3f107f1cd7d078c8140"},
-    {file = "PyQt6_Qt6-6.2.4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:0aa93581b92e01deaf2dcaad88ed6718996a6d84de59ee88316bcba143f008c9"},
-    {file = "PyQt6_Qt6-6.2.4-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:b68543e5d5a4f5d24c26b517569da3cd30b0fbe75390b841e142c160399b3c0a"},
-    {file = "PyQt6_Qt6-6.2.4-py3-none-win_amd64.whl", hash = "sha256:42c37475a50ec7e06e0445ac9ce39465f69a86af407ad9b28b183da178d401ee"},
-]
-pyqt6-sip = [
-    {file = "PyQt6_sip-13.2.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:226e9e349aa16dc1132f106ca01fa99cf7cb8e59daee29304c2fea5fa33212ec"},
-    {file = "PyQt6_sip-13.2.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:0314d011633bc697e99f3f9897b484720e81a5f4ba0eaa5f05c5811e2e74ea53"},
-    {file = "PyQt6_sip-13.2.1-cp310-cp310-win_amd64.whl", hash = "sha256:8b52d42e42e6e9f934ac7528cd154ac0210a532bb33fa1edfb4a8bbfb73ff88b"},
-    {file = "PyQt6_sip-13.2.1-cp36-cp36m-macosx_10_6_intel.whl", hash = "sha256:e2e6a3972169891dbc33d806f50ebf17eaa47a487ff6e4910fe2485c47cb6c2b"},
-    {file = "PyQt6_sip-13.2.1-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:a3d53fab72f959b45aeb954124255b585ff8d497a514a2582e0afd808fc2f3da"},
-    {file = "PyQt6_sip-13.2.1-cp36-cp36m-win_amd64.whl", hash = "sha256:082a80264699d4e2e919a7de8b6662886a353863d2b30a0047fe73d42e65c98e"},
-    {file = "PyQt6_sip-13.2.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:c456d5ccc4478254052082e298db01bb9d0495471c1659046697bb5dc9d2506c"},
-    {file = "PyQt6_sip-13.2.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:65f5aee6195bd0e785bd74f75ee080a5d5fb840c03210956e4ccbdde481b487c"},
-    {file = "PyQt6_sip-13.2.1-cp37-cp37m-win_amd64.whl", hash = "sha256:43afd9c9fdbc5f6ed2e22cae0752a8b8d9545c6d85f314bd27b861e21d4a97fe"},
-    {file = "PyQt6_sip-13.2.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:0a49f2d0bb49bc9d72665d62fb5ab6549c72dcf49e1e52dc2046edb8832a17a3"},
-    {file = "PyQt6_sip-13.2.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:0ede42e84a79871022e1a8e4d5c05f70821b2795910c4cd103e863ce62bc8d68"},
-    {file = "PyQt6_sip-13.2.1-cp38-cp38-win_amd64.whl", hash = "sha256:b0d92f4a21706b18ab80c088cded94cd64d32a0c48e1729a4cc53fe5ab93cc1a"},
-    {file = "PyQt6_sip-13.2.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:616b6bad827e9c6e7ce5179883ca0f44110a42dcb045344aa28a495c05e19795"},
-    {file = "PyQt6_sip-13.2.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:f4226d4ab239d8655f94c42b397f23e6e85b246f614ff81162ef9321e47f7619"},
-    {file = "PyQt6_sip-13.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:4b119a8fd880ece15a5bdff583edccd89dbc79d49de2e11cbbd6bba72713d1f3"},
-    {file = "PyQt6_sip-13.2.1.tar.gz", hash = "sha256:b7bce59900b2e0a04f70246de2ccf79ee7933036b6b9183cf039b62eeae2b858"},
-]
-pyqtgraph = [
-    {file = "pyqtgraph-0.12.4-py3-none-any.whl", hash = "sha256:d98c6e26e9eda6d1d1bba92d6df381ef77fca18b701f9e136759ce31a17c6217"},
-    {file = "pyqtgraph-0.12.4.tar.gz", hash = "sha256:c2c8f2b7e1d7f97a710f370acff6368d686c9d6cdc560f2d83dcf59185dfa19d"},
+    {file = "pyparsing-3.0.8-py3-none-any.whl", hash = "sha256:ef7b523f6356f763771559412c0d7134753f037822dad1b16945b7b846f7ad06"},
+    {file = "pyparsing-3.0.8.tar.gz", hash = "sha256:7bf433498c016c4314268d95df76c81b842a4cb2b276fa3312cfb1e1d85f6954"},
 ]
 pytest = [
     {file = "pytest-7.1.1-py3-none-any.whl", hash = "sha256:92f723789a8fdd7180b6b06483874feca4c48a5c76968e03bb3e7f806a1869ea"},
@@ -2377,8 +2286,8 @@ sphinx = [
     {file = "Sphinx-4.5.0.tar.gz", hash = "sha256:7bf8ca9637a4ee15af412d1a1d9689fec70523a68ca9bb9127c2f3eeb344e2e6"},
 ]
 sphinx-autodoc-typehints = [
-    {file = "sphinx_autodoc_typehints-1.17.0-py3-none-any.whl", hash = "sha256:081daf53077b4ae1c28347d6d858e13e63aefe3b4aacef79fd717dd60687b470"},
-    {file = "sphinx_autodoc_typehints-1.17.0.tar.gz", hash = "sha256:51c7b3f5cb9ccd15d0b52088c62df3094f1abd9612930340365c26def8629a14"},
+    {file = "sphinx_autodoc_typehints-1.18.1-py3-none-any.whl", hash = "sha256:f8f5bb7c13a9a71537dc2be2eb3b9e28a9711e2454df63587005eacf6fbac453"},
+    {file = "sphinx_autodoc_typehints-1.18.1.tar.gz", hash = "sha256:07631c5f0c6641e5ba27143494aefc657e029bed3982138d659250e617f6f929"},
 ]
 sphinx-rtd-theme = [
     {file = "sphinx_rtd_theme-1.0.0-py2.py3-none-any.whl", hash = "sha256:4d35a56f4508cfee4c4fb604373ede6feae2a306731d533f409ef5c3496fdbd8"},
@@ -2431,8 +2340,8 @@ termcolor = [
     {file = "termcolor-1.1.0.tar.gz", hash = "sha256:1d6d69ce66211143803fbc56652b41d73b4a400a2891d7bf7a1cdf4c02de613b"},
 ]
 tifffile = [
-    {file = "tifffile-2022.3.25-py3-none-any.whl", hash = "sha256:c458ef981220bf501ca7f04ce489a9a0395c918914a4a47527a51bbb4c43425a"},
-    {file = "tifffile-2022.3.25.tar.gz", hash = "sha256:6d943f2c01b1a34a476c963d119565fba108f559e061426c63a5157846959ed9"},
+    {file = "tifffile-2022.4.8-py3-none-any.whl", hash = "sha256:00795738af6ebaf98da456eca2c637febde4fd467477c4ef2e09482883d44aed"},
+    {file = "tifffile-2022.4.8.tar.gz", hash = "sha256:d4a4057e5cb7afe6e24cf7bde42a163970b593afe44c17249894ede755cf3faa"},
 ]
 tomli = [
     {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},

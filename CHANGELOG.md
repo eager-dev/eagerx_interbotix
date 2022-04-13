@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.4 (2022-04-13)
+### Fix
+* Update dependencies (remove gui, and bump pybullet) ([`8d3b0de`](https://github.com/eager-dev/eagerx_interbotix/commit/8d3b0deabc3e94e4792c60756e46592fb5b49471))
+* Rename safetyfilter ([`23bff85`](https://github.com/eager-dev/eagerx_interbotix/commit/23bff85fb2f65d82999d7ebcd4edae5f4a168577))
+* Add box & codestyle ([`3582b2d`](https://github.com/eager-dev/eagerx_interbotix/commit/3582b2d5e4858329aa588efa6df8f3df7fbe8fdd))
+* Add velocity ([`bb10b3e`](https://github.com/eager-dev/eagerx_interbotix/commit/bb10b3e161dd1df859609cae152059349105f265))
+
+### Documentation
+* Update readme ([`ee8b64a`](https://github.com/eager-dev/eagerx_interbotix/commit/ee8b64a37ab559e23f940ba881bc8ef32d8964e2))
+
 ## v0.1.3 (2022-04-08)
 ### Fix
 * Implement learning routine ([`171dbe0`](https://github.com/eager-dev/eagerx_interbotix/commit/171dbe0e70225359a744346270b1ac6841def9f1))

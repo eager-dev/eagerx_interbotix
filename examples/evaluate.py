@@ -13,7 +13,7 @@ import gym.wrappers as w
 import stable_baselines3 as sb
 import os
 
-# NAME = "dynamicsRandomization_2022-04-13-1240"
+# NAME = "sac_dynamicsRandomization_2022-04-13-1240"
 # STEPS = 700000
 NAME = "better_velControl_highCtrlCost_normalized_2022-04-12-1610"
 STEPS = 900000

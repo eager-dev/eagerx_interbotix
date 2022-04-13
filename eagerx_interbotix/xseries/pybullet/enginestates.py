@@ -2,6 +2,7 @@ from eagerx.core.entities import EngineState
 import eagerx.core.register as register
 import pybullet
 
+
 class PbXseriesGripper(EngineState):
     @staticmethod
     @register.spec("PbXseriesGripper", EngineState)
@@ -61,7 +62,7 @@ class PbXseriesGripper(EngineState):
                     bodyUniqueId=bodyUniqueId,
                     jointIndices=jointIndices,
                     controlMode=pybullet.VELOCITY_CONTROL,
-                    forces=len(jointIndices)*[10**9],
+                    forces=len(jointIndices) * [10**9],
                     physicsClientId=p._client,
                 )
 

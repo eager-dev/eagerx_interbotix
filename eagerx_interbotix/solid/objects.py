@@ -17,8 +17,11 @@ class Solid(Object):
         pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
     )
     @register.engine_states(
-        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray,
-        lateral_friction=Float32
+        pos=Float32MultiArray,
+        vel=Float32MultiArray,
+        orientation=Float32MultiArray,
+        angular_vel=Float32MultiArray,
+        lateral_friction=Float32,
     )
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):

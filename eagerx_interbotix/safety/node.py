@@ -408,24 +408,24 @@ class SafeVelocityControl(Node):
             # Linearly interpolate for intermediate joint configurations
 
             lin_vel = np.linspace(velocity, filtered, self.checks)
-            interp = np.empty((position.shape[0], self.checks+1), dtype="float32")
+            interp = np.empty((position.shape[0], self.checks + 1), dtype="float32")
 
             interp[:, 0] = position
             interp[:, -1] = clip_position
             for i in range(self.checks):
                 interp[:, i] += lin_vel[i] * self.dt / self.checks
-                if i+1 < self.checks:
-                    interp[:, i+1] = interp[:, i]
+                if i + 1 < self.checks:
+                    interp[:, i + 1] = interp[:, i]
 
-            for i in range(self.checks+1):
+            for i in range(self.checks + 1):
                 flag = self.self_collision.in_collision(q=interp[:, i], margin=self.margin)
                 flag = flag | self.workspace.in_collision(margin=self.margin)
                 if flag:
                     self.consecutive_unsafe += 1
                     if len(self.safe_poses) > 0:
-                        idx = min(len(self.safe_poses), self.consecutive_unsafe+1)
+                        idx = min(len(self.safe_poses), self.consecutive_unsafe + 1)
                         filtered = (self.safe_poses[-idx] - position) / self.dt
-                        filtered = 0.5*np.clip(filtered, -self.vel_limit, self.vel_limit, dtype="float32")
+                        filtered = 0.5 * np.clip(filtered, -self.vel_limit, self.vel_limit, dtype="float32")
                     else:
                         filtered * 0
                     break
@@ -435,4 +435,3 @@ class SafeVelocityControl(Node):
             self.consecutive_unsafe = 0
             in_collision = UInt64(data=0)
         return dict(filtered=Float32MultiArray(data=filtered), in_collision=in_collision)
-

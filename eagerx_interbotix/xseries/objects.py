@@ -207,7 +207,7 @@ class Xseries(Object):
         spec.PybulletBridge.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
 
         # Fix gripper if we are not controlling it.
-        if 'gripper_control' not in spec.config.actuators:
+        if "gripper_control" not in spec.config.actuators:
             spec.PybulletBridge.states.gripper.fixed = True
 
         # Create sensor engine nodes

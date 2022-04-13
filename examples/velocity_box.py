@@ -14,9 +14,10 @@ import stable_baselines3 as sb
 from datetime import datetime
 import os
 
-NAME = "dynamicsRandomization"
+NAME = "box_dynamicsRandomization"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
+# todo: test ppo
 # todo: increase weight on goal -> can distance
 # todo: vary starting position of object
 # todo: slightly vary starting position of arm
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
     solid = eagerx.Object.make(
-        "Solid", "solid", urdf=urdf_path + "can.urdf", rate=rate, sensors=["pos"], base_pos=[0, 0, 1], fixed_base=False,
+        "Solid", "solid", urdf=urdf_path + "box.urdf", rate=rate, sensors=["pos"], base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
     )
     solid.sensors.pos.space_converter.low = [0, -1, 0]
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 
     # Create solid goal
     goal = eagerx.Object.make(
-        "Solid", "goal", urdf=urdf_path + "can_goal.urdf", rate=rate, sensors=["pos"], base_pos=[1, 0, 1], fixed_base=True
+        "Solid", "goal", urdf=urdf_path + "box_goal.urdf", rate=rate, sensors=["pos"], base_pos=[1, 0, 1], fixed_base=True
     )
     goal.sensors.pos.space_converter.low = [0, -1, 0]
     goal.sensors.pos.space_converter.high = [1, 1, 0.15]
@@ -115,7 +116,7 @@ if __name__ == "__main__":
         # Penalize distance of the end-effector to the object
         rwd_near = 0.4 * -abs(np.linalg.norm(ee_pos - can) - 0.033)
         # Penalize distance of the object to the goal
-        rwd_dist = 2.0 * -np.linalg.norm(goal - can)
+        rwd_dist = 3.0 * -np.linalg.norm(goal - can)
         # Penalize actions (indirectly, by punishing the angular velocity.
         rwd_ctrl = 0.1 * -np.linalg.norm(des_vel - vel)
         rwd = rwd_dist + rwd_ctrl + rwd_near
@@ -137,22 +138,16 @@ if __name__ == "__main__":
     def reset_fn(env):
         states = env.state_space.sample()
 
+        # Set orientation
+        states["goal/orientation"] = np.array([0, 0, 0, 1])
+        states["solid/orientation"] = states["goal/orientation"]
+
         # Sample new starting state (at least 17 cm from goal)
-        radius = 0.17
-        z = 0.03
-        while True:
-            can_pos = np.concatenate(
-                [
-                    np.random.uniform(low=0, high=1.1 * radius, size=1),
-                    np.random.uniform(low=-1.2 * radius, high=1.2 * radius, size=1),
-                    [z],
-                ]
-            )
-            if np.linalg.norm(can_pos) > radius:
-                break
-        states["solid/pos"] = np.array([0.4, -0.2, z])
-        y = np.random.uniform(low=0, high=0.3)
-        states["goal/pos"] = np.array([0.4, y, z])
+        z = 0.035
+        dx = np.random.uniform(low=-0.03, high=0.03)
+        dy = np.random.uniform(low=-0.03, high=0.03)
+        states["solid/pos"] = np.array([0.4 + dx, -0.2 + dy, z])
+        states["goal/pos"] = np.array([0.4, 0.2, z])
 
         # Set gripper to closed position
         states["viper/gripper"][0] = 0
@@ -167,8 +162,7 @@ if __name__ == "__main__":
     # Initialize model
     os.mkdir(LOG_DIR)
     graph.save(f"{LOG_DIR}/graph.yaml")
-    model = sb.PPO("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
-    # model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
 
     # Create experiment directory
     delta_steps = 100000

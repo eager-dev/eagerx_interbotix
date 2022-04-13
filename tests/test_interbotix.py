@@ -69,7 +69,7 @@ def test_interbotix(eps, num_steps, is_reactive, rtf, p):
         robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
     )
     safe = eagerx.Node.make(
-        "SafetyFilter", "safety", 20, c.joint_names, c.joint_upper, c.joint_lower, c.vel_limit, checks=5, collision=collision
+        "SafePositionControl", "safety", 20, c.joint_names, c.joint_upper, c.joint_lower, c.vel_limit, checks=5, collision=collision
     )
     graph.add(safe)
 

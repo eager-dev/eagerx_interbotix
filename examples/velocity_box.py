@@ -17,7 +17,6 @@ import os
 NAME = "box_dynamicsRandomization"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
-# todo: test ppo
 # todo: increase weight on goal -> can distance
 # todo: vary starting position of object
 # todo: slightly vary starting position of arm
@@ -162,10 +161,11 @@ if __name__ == "__main__":
     # Initialize model
     os.mkdir(LOG_DIR)
     graph.save(f"{LOG_DIR}/graph.yaml")
-    model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    model = sb.PPO("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    # model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
 
     # Create experiment directory
-    delta_steps = 100000
+    delta_steps = 400000
     for i in range(1, 30):
         model.learn(delta_steps)
         model.save(f"{LOG_DIR}/model_{i*delta_steps}")

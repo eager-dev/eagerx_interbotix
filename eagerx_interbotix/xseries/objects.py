@@ -239,7 +239,7 @@ class Xseries(Object):
             vel_target=len(joints) * [0.0],
             pos_gain=len(joints) * [0.5],
             vel_gain=len(joints) * [1.0],
-            max_force=len(joints) * [3.0],
+            max_force=len(joints) * [2.0],
         )
         vel_control = EngineNode.make(
             "JointController",

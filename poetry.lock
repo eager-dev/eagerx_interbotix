@@ -276,14 +276,14 @@ pybullet = ">=3.2.1,<4.0.0"
 
 [[package]]
 name = "eagerx-reality"
-version = "0.1.5"
+version = "0.1.6"
 description = "Simple bridge that can be used in reality together with several useful nodes."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4.0.0"
 
 [package.dependencies]
-eagerx = ">=0.1.14,<0.2.0"
+eagerx = ">=0.1.17,<0.2.0"
 
 [[package]]
 name = "flake8"
@@ -1540,8 +1540,8 @@ eagerx-pybullet = [
     {file = "eagerx_pybullet-0.1.7.tar.gz", hash = "sha256:b0676cfe79538922cc56f3acde71daf008515d5c1e57f3c63e4bc4e9969b264b"},
 ]
 eagerx-reality = [
-    {file = "eagerx_reality-0.1.5-py3-none-any.whl", hash = "sha256:b8890b054216d5ddffe3ed301f4a4b43ac6e695454f4173f5c04cbbaf9e1e958"},
-    {file = "eagerx_reality-0.1.5.tar.gz", hash = "sha256:3d7ed3759f08d22ad4b6a5991604aab255dcda77a6010f8dd6e9fa9fd0b83397"},
+    {file = "eagerx_reality-0.1.6-py3-none-any.whl", hash = "sha256:5b960fefcf9cf18702017693abb6798219d518fa2ab1683f3ca41714587224a9"},
+    {file = "eagerx_reality-0.1.6.tar.gz", hash = "sha256:68f3ca96a6c33cb7fc26d6505a62b0fc625ac91899759e3cbca92428c4ff12b0"},
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -2097,10 +2097,6 @@ pyasn1-modules = [
     {file = "pyasn1_modules-0.2.8-py3.7.egg", hash = "sha256:c29a5e5cc7a3f05926aff34e097e84f8589cd790ce0ed41b67aed6857b26aafd"},
 ]
 pybullet = [
-    {file = "pybullet-3.2.2-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:9f6f01c8826110312694a30a1af59644792a923826cee182cffebdb1beafd89c"},
-    {file = "pybullet-3.2.2-cp27-cp27mu-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:28479038a42f3e3207d345202ac956181ccd9f2e0be0831fe52e311b9fc326a7"},
-    {file = "pybullet-3.2.2-cp35-cp35m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:e99139a177695a57df8f754363e974065d1673e497834cdbd22c8ee1789d692b"},
-    {file = "pybullet-3.2.2-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:63f4f09d14d0d0bd5e1bbf6c245986ad704578e77013463b7b66255d4b4adc70"},
     {file = "pybullet-3.2.2-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:c774195ce42a22e71ee0c62519c9419a1f45faaa1a5d87f2ebf1fbeeead0f4f1"},
     {file = "pybullet-3.2.2-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:3b9c651fd0cc518b6215d038e2ba71550a3302634e6b82ed36e8ed12ecfdca5a"},
     {file = "pybullet-3.2.2-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:3b07233c3d613bf7efff540a106b5f61c23ca4fa671a199af5052692968f8daf"},

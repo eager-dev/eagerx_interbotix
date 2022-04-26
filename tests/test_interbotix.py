@@ -15,15 +15,15 @@ ENV = eagerx.process.ENVIRONMENT
 
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize(
-    "eps, num_steps, is_reactive, rtf, p",
+    "eps, num_steps, sync, rtf, p",
     [(3, 20, True, 0, NP), (3, 20, True, 0, ENV)]
 )
-def test_interbotix(eps, num_steps, is_reactive, rtf, p):
+def test_interbotix(eps, num_steps, sync, rtf, p):
     # Start roscore
     roscore = eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
     # Define unique name for test environment
-    name = f"{eps}_{num_steps}_{is_reactive}_{p}"
+    name = f"{eps}_{num_steps}_{sync}_{p}"
     bridge_p = p
 
     # Define rate
@@ -90,7 +90,7 @@ def test_interbotix(eps, num_steps, is_reactive, rtf, p):
     graph.connect(source=arm.sensors.pos, observation="joints")
 
     # Define bridges
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=20, gui=False, egl=False, is_reactive=True, real_time_factor=0,
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=20, gui=False, egl=False, sync=True, real_time_factor=0,
                                 process=bridge_p)
 
     # Define step function

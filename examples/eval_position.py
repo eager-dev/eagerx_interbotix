@@ -111,8 +111,8 @@ if __name__ == "__main__":
     graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
 
     # Define bridges
-    # bridge = Bridge.make("RealBridge", rate=rate, is_reactive=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, is_reactive=True, real_time_factor=1.0)
+    # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0)
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):

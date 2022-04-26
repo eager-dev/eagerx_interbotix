@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.5 (2022-04-26)
+### Fix
+* Update pytest, flake8 ([`c5d0cba`](https://github.com/eager-dev/eagerx_interbotix/commit/c5d0cba010570e27f84086dc000fe44e562c2912))
+* Bump eagerx-pybullet to 0.1.7 ([`3345cde`](https://github.com/eager-dev/eagerx_interbotix/commit/3345cde06c03aa75c5d4e67a405147b2b7b7bda2))
+* Refactor `is_reactive` to `sync` ([`9816d1b`](https://github.com/eager-dev/eagerx_interbotix/commit/9816d1bcad821893abca168abc92a6c860a7af8d))
+* Position with box ([`e198232`](https://github.com/eager-dev/eagerx_interbotix/commit/e198232f8b7b7449c5d2887dc45ae0238f5e1911))
+
 ## v0.1.4 (2022-04-13)
 ### Fix
 * Update dependencies (remove gui, and bump pybullet) ([`8d3b0de`](https://github.com/eager-dev/eagerx_interbotix/commit/8d3b0deabc3e94e4792c60756e46592fb5b49471))

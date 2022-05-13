@@ -44,9 +44,6 @@ class ResetArm(ResetNode):
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(ResetArm)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate

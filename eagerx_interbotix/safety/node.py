@@ -50,9 +50,6 @@ class SafePositionControl(Node):
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(SafePositionControl)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -258,9 +255,6 @@ class SafeVelocityControl(Node):
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(SafeVelocityControl)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate

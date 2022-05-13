@@ -119,9 +119,6 @@ class Xseries(Object):
         mode_config=None,
     ):
         """Object spec of Xseries"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        Xseries.initialize_spec(spec)
-
         # Extract info on xseries arm from assets
         motor_config, mode_config = get_configs(robot_type, motor_config, mode_config)
         urdf = URDF.from_parameter_server(generate_urdf(robot_type, ns="pybullet_urdf"))

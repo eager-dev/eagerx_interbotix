@@ -7,7 +7,6 @@ class PbXseriesGripper(EngineState):
     @staticmethod
     @register.spec("PbXseriesGripper", EngineState)
     def spec(spec, joints, constant, scale, fixed=False):
-        spec.initialize(PbXseriesGripper)
         spec.config.joints = joints
         spec.config.constant = constant
         spec.config.scale = scale

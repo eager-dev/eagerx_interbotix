@@ -263,6 +263,20 @@ tabulate = ">=0.8.9,<0.9.0"
 termcolor = ">=1.1.0,<2.0.0"
 
 [[package]]
+name = "eagerx-gui"
+version = "0.2.1"
+description = "GUI to visualise graphs in EAGERx."
+category = "main"
+optional = false
+python-versions = ">=3.8,<4.0"
+
+[package.dependencies]
+eagerx = ">=0.1.14,<0.2.0"
+opencv-python = ">=4.5,<5.0"
+PyQt6 = ">=6.2.3,<7.0.0"
+pyqtgraph = ">=0.12.4,<0.13.0"
+
+[[package]]
 name = "eagerx-pybullet"
 version = "0.1.7"
 description = "This repository contains the eagerx_pybllet package, which allows to simulate systems with EAGERx using pybullet."
@@ -824,6 +838,45 @@ python-versions = ">=3.6.8"
 diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
+name = "pyqt6"
+version = "6.3.0"
+description = "Python bindings for the Qt cross platform application toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.6.1"
+
+[package.dependencies]
+PyQt6-Qt6 = ">=6.3.0"
+PyQt6-sip = ">=13.2,<14"
+
+[[package]]
+name = "pyqt6-qt6"
+version = "6.3.0"
+description = "The subset of a Qt installation needed by PyQt6."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "pyqt6-sip"
+version = "13.3.1"
+description = "The sip module support for PyQt6"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
+name = "pyqtgraph"
+version = "0.12.4"
+description = "Scientific Graphics and GUI Library for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.17.0"
+
+[[package]]
 name = "pytest"
 version = "7.1.2"
 description = "pytest: simple powerful testing with Python"
@@ -1372,7 +1425,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "6ab0f4fe64c7a54e27957251450dd2cb52ab1af480e156db315c57e53b7d9b7d"
+content-hash = "d04862ce6c91c838ebf7cf1920d9fb5d042757047babef2e6da49d6c284698b9"
 
 [metadata.files]
 absl-py = [
@@ -1534,6 +1587,10 @@ docutils = [
 eagerx = [
     {file = "eagerx-0.1.17-py3-none-any.whl", hash = "sha256:10614b4fecdb5d06cea9fdcc2007dd9a77ff06f7b820d2e5f6d38c76e6dc3507"},
     {file = "eagerx-0.1.17.tar.gz", hash = "sha256:38d9eaaf0079948ce1ed09f8628c1b3947c23f2926d8f7616c40f42e1364b5d9"},
+]
+eagerx-gui = [
+    {file = "eagerx_gui-0.2.1-py3-none-any.whl", hash = "sha256:30561d26c2d675a604a22856f9c662b0968e2b5d778e4757b7b8df383a4850dd"},
+    {file = "eagerx_gui-0.2.1.tar.gz", hash = "sha256:016b453d0f52f8ce1e395952188f799800ae5615f318b2803a37ac07b7b25ec9"},
 ]
 eagerx-pybullet = [
     {file = "eagerx_pybullet-0.1.7-py3-none-any.whl", hash = "sha256:2462aa78abd3e9b05e3d3e1a69657dc28873901ffa8adfc0fc793d63dd984cbd"},
@@ -2125,6 +2182,37 @@ pygments = [
 pyparsing = [
     {file = "pyparsing-3.0.8-py3-none-any.whl", hash = "sha256:ef7b523f6356f763771559412c0d7134753f037822dad1b16945b7b846f7ad06"},
     {file = "pyparsing-3.0.8.tar.gz", hash = "sha256:7bf433498c016c4314268d95df76c81b842a4cb2b276fa3312cfb1e1d85f6954"},
+]
+pyqt6 = [
+    {file = "PyQt6-6.3.0-cp37-abi3-macosx_10_14_universal2.whl", hash = "sha256:20dec18471d3e574e37411618725dc2901443a781f5c6d974b041413141f33e4"},
+    {file = "PyQt6-6.3.0-cp37-abi3-manylinux1_x86_64.whl", hash = "sha256:ff4244507d1ff54fffa27cdaf4d4df90e4252fd1843ba28d2f32a4c79c3ece4e"},
+    {file = "PyQt6-6.3.0-cp37-abi3-win_amd64.whl", hash = "sha256:e193f8714ff21cb13fe4a6148b963893ff9ff738676fc9c853333259b9b64425"},
+    {file = "PyQt6-6.3.0.tar.gz", hash = "sha256:4fd85dcb15ea4e734b6e4e216fe9a6246779761edaf2cf7c0cce1a2303a8d31b"},
+]
+pyqt6-qt6 = [
+    {file = "PyQt6_Qt6-6.3.0-py3-none-macosx_10_14_x86_64.whl", hash = "sha256:e87d192d20c5789aa1271025831881dde071a357a1956c808fb5e1b4603ec832"},
+    {file = "PyQt6_Qt6-6.3.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:7f94dcf6f60e3e395083d87e49f14ccc194cd45d73f301ade39bc6adfdfc765f"},
+    {file = "PyQt6_Qt6-6.3.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:bef30ad651fa5fbc4a5d157862108c6ea270e636cc98b1eafdb93f5c7fef7eff"},
+    {file = "PyQt6_Qt6-6.3.0-py3-none-win_amd64.whl", hash = "sha256:0782dc4da4933755182724290b43f52441b1b90c377ee7e6a1b625bb91c09a10"},
+]
+pyqt6-sip = [
+    {file = "PyQt6_sip-13.3.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:7c26dcba7deebb3d001079eda84be911bac55520b5e7b7113fac1859d850b566"},
+    {file = "PyQt6_sip-13.3.1-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:b94dc4ecda4b6a011cdb5fdff0eae27567d30c30bc884c78394b76e02eb3df7a"},
+    {file = "PyQt6_sip-13.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:33c4a39e9fce8448d0abb79f80ecf35b8420ec76fa90b056173ce69a8a2ae769"},
+    {file = "PyQt6_sip-13.3.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3bffad016f115a003f290bf8e92d2fd38d6b3c832946e7ee98aa9ecc20c431ba"},
+    {file = "PyQt6_sip-13.3.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:ef89555ad34ca8b8f6d2e3ccacd4edacebef781404254c2cb17ba1c60cdc57c2"},
+    {file = "PyQt6_sip-13.3.1-cp37-cp37m-win_amd64.whl", hash = "sha256:10e54200c619276f4e79c615b0d2f1f612a8b4fe443c119869de62546e0f9f2f"},
+    {file = "PyQt6_sip-13.3.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:98c53675a4fb2507126ff2ea3ec03872d6e59624d45e6ad95053f74002be121f"},
+    {file = "PyQt6_sip-13.3.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:b9506e2ddb126541457db939311432a63d0affc83bf86ff902d1664c7c167db6"},
+    {file = "PyQt6_sip-13.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:0f4d7a0dd9c610ab0b2e7b46cfa45eeecd72a50f9d2a82a883d4fc2a0eabe216"},
+    {file = "PyQt6_sip-13.3.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:45f23a3de6290ab311d827a371e82c09cd3203d57c74e8aa739280feb0960f80"},
+    {file = "PyQt6_sip-13.3.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:f17c15665a4007cdf167eaeb133408b8e3409203303199a00068da63ea4c41a3"},
+    {file = "PyQt6_sip-13.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:77edc790f8bae29729103b378ccd29beba402bcdde5c584bd4aebbf8c8a75caa"},
+    {file = "PyQt6_sip-13.3.1.tar.gz", hash = "sha256:d629c0e39d5ccfdae567b92ba74d92f9180b7c55535f82251f1a12a9076a9e01"},
+]
+pyqtgraph = [
+    {file = "pyqtgraph-0.12.4-py3-none-any.whl", hash = "sha256:d98c6e26e9eda6d1d1bba92d6df381ef77fca18b701f9e136759ce31a17c6217"},
+    {file = "pyqtgraph-0.12.4.tar.gz", hash = "sha256:c2c8f2b7e1d7f97a710f370acff6368d686c9d6cdc560f2d83dcf59185dfa19d"},
 ]
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},

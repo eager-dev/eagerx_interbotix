@@ -291,7 +291,7 @@ pybullet = ">=3.2.1,<4.0.0"
 [[package]]
 name = "eagerx-reality"
 version = "0.1.5"
-description = "Simple bridge that can be used in reality together with several useful nodes."
+description = "Simple engine that can be used in reality together with several useful nodes."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4.0.0"

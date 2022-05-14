@@ -2,7 +2,7 @@
 from eagerx.core.env import EagerxEnv
 from eagerx.core.graph import Graph
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
-import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
+import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unused-import
 import eagerx_interbotix  # Registers objects # noqa # pylint: disable=unused-import
 
 # Other
@@ -24,7 +24,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     # Define unique name for test environment
     name = f"{eps}_{num_steps}_{sync}_{p}"
-    bridge_p = p
+    engine_p = p
 
     # Define rate
     rate = 5
@@ -89,9 +89,9 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     graph.connect(source=safe.outputs.in_collision, target=reset.inputs.in_collision, skip=True)
     graph.connect(source=arm.sensors.pos, observation="joints")
 
-    # Define bridges
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=20, gui=False, egl=False, sync=True, real_time_factor=0,
-                                process=bridge_p)
+    # Define engines
+    engine = eagerx.Engine.make("PybulletEngine", rate=20, gui=False, egl=False, sync=True, real_time_factor=0,
+                                process=engine_p)
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -104,7 +104,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
         return obs, rwd, done, info
 
     # Initialize Environment
-    env = EagerxEnv(name=name, rate=rate, graph=graph, bridge=bridge, step_fn=step_fn)
+    env = EagerxEnv(name=name, rate=rate, graph=graph, engine=engine, step_fn=step_fn)
 
     # Evaluate
     for e in range(eps):

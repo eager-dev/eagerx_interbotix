@@ -40,7 +40,7 @@ class ResetArm(ResetNode):
         :param threshold: Closeness to the goal joints before considering the reset to be finished.
         :param timeout: Seconds before considering the reset to be finished, regardless of the closeness. A value of `0` means
                         indefinite.
-        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: BRIDGE, 3: EXTERNAL}
+        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """

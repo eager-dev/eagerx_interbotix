@@ -2,7 +2,7 @@
 from std_msgs.msg import Float32MultiArray, Float32
 
 # EAGERx IMPORTS
-from eagerx_pybullet.bridge import PybulletBridge
+from eagerx_pybullet.engine import PybulletEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
@@ -129,26 +129,26 @@ class Solid(Object):
         Solid.agnostic(spec, rate)
 
     @staticmethod
-    @register.bridge(entity_id, PybulletBridge)
-    def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
+    @register.engine(entity_id, PybulletEngine)
+    def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import eagerx_interbotix.solid.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
-        # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
-        spec.PybulletBridge.urdf = spec.config.urdf
-        spec.PybulletBridge.basePosition = spec.config.base_pos
-        spec.PybulletBridge.baseOrientation = spec.config.base_or
-        spec.PybulletBridge.fixed_base = spec.config.fixed_base
-        spec.PybulletBridge.self_collision = spec.config.self_collision
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
+        spec.PybulletEngine.urdf = spec.config.urdf
+        spec.PybulletEngine.basePosition = spec.config.base_pos
+        spec.PybulletEngine.baseOrientation = spec.config.base_or
+        spec.PybulletEngine.fixed_base = spec.config.fixed_base
+        spec.PybulletEngine.self_collision = spec.config.self_collision
 
         # Create engine_states (no agnostic states defined in this case)
-        spec.PybulletBridge.states.pos = EngineState.make("LinkState", mode="position")
-        spec.PybulletBridge.states.vel = EngineState.make("LinkState", mode="velocity")
-        spec.PybulletBridge.states.orientation = EngineState.make("LinkState", mode="orientation")
-        spec.PybulletBridge.states.angular_vel = EngineState.make("LinkState", mode="angular_vel")
-        spec.PybulletBridge.states.lateral_friction = EngineState.make("PbDynamics", parameter="lateralFriction")
+        spec.PybulletEngine.states.pos = EngineState.make("LinkState", mode="position")
+        spec.PybulletEngine.states.vel = EngineState.make("LinkState", mode="velocity")
+        spec.PybulletEngine.states.orientation = EngineState.make("LinkState", mode="orientation")
+        spec.PybulletEngine.states.angular_vel = EngineState.make("LinkState", mode="angular_vel")
+        spec.PybulletEngine.states.lateral_friction = EngineState.make("PbDynamics", parameter="lateralFriction")
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)

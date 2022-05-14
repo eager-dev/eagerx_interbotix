@@ -3,9 +3,9 @@ from eagerx.wrappers.flatten import Flatten
 from eagerx.core.env import EagerxEnv
 from eagerx.core.graph import Graph
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
-import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
+import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unused-import
 import eagerx_interbotix  # Registers objects # noqa # pylint: disable=unused-import
-import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
+import eagerx_reality  # Registers engine # noqa # pylint: disable=unused-import
 
 # Other
 import numpy as np
@@ -98,9 +98,9 @@ if __name__ == "__main__":
     graph.connect(source=arm.sensors.vel, target=safe.inputs.velocity)
     graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
 
-    # Define bridges
-    # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0)
+    # Define engines
+    # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
+    engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0)
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         return states
 
     # Initialize Environment
-    env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+    env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
     env = Flatten(env)
     env = w.rescale_action.RescaleAction(env, min_action=-1.5, max_action=1.5)
 

@@ -11,9 +11,9 @@ include = ["assets"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-eagerx-gui = "^0.2.1"
-eagerx-pybullet = "^0.1.7"
-eagerx-reality = "^0.1.5"
+eagerx-gui = "^0.2.5"
+eagerx-pybullet = "^0.1.8"
+eagerx-reality = "^0.1.7"
 scipy = "^1.0"
 modern_robotics = "^1.1.0"
 urdf-parser-py = "^0.0.4"

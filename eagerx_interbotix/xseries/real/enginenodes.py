@@ -34,9 +34,6 @@ class XseriesSensor(EngineNode):
         mode: str = "position",
     ):
         """XseriesSensor spec"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(XseriesSensor)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -88,9 +85,6 @@ class XseriesArm(EngineNode):
         mode: str = "position_control",
     ):
         """XseriesArm spec"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(XseriesArm)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -149,9 +143,6 @@ class XseriesGripper(EngineNode):
         color: Optional[str] = "green",
     ):
         """XseriesGripper spec"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(XseriesGripper)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate

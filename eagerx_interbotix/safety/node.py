@@ -46,13 +46,10 @@ class SafePositionControl(Node):
         :param duration: time (seconds) it takes to reach the commanded positions from the current position.
         :param checks: collision checks performed over the duration.
         :param collision: A dict with the robot & workspace specification.
-        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: BRIDGE, 3: EXTERNAL}
+        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(SafePositionControl)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -254,13 +251,10 @@ class SafeVelocityControl(Node):
         :param duration: time (seconds) it takes to reach the commanded positions from the current position.
         :param checks: collision checks performed over the duration.
         :param collision: A dict with the robot & workspace specification.
-        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: BRIDGE, 3: EXTERNAL}
+        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
         :return:
         """
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        spec.initialize(SafeVelocityControl)
-
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate

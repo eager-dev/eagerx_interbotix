@@ -3,8 +3,8 @@ from urdf_parser_py.urdf import URDF
 from std_msgs.msg import Float32MultiArray
 
 # EAGERx IMPORTS
-from eagerx_reality.bridge import RealBridge
-from eagerx_pybullet.bridge import PybulletBridge
+from eagerx_reality.engine import RealEngine
+from eagerx_pybullet.engine import PybulletEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState, Processor
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
@@ -119,9 +119,6 @@ class Xseries(Object):
         mode_config=None,
     ):
         """Object spec of Xseries"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        Xseries.initialize_spec(spec)
-
         # Extract info on xseries arm from assets
         motor_config, mode_config = get_configs(robot_type, motor_config, mode_config)
         urdf = URDF.from_parameter_server(generate_urdf(robot_type, ns="pybullet_urdf"))
@@ -175,23 +172,23 @@ class Xseries(Object):
         Xseries.agnostic(spec, rate)
 
     @staticmethod
-    # This decorator pre-initializes bridge implementation with default object_params
-    @register.bridge(entity_id, PybulletBridge)
-    def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
+    # This decorator pre-initializes engine implementation with default object_params
+    @register.engine(entity_id, PybulletEngine)
+    def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import eagerx_interbotix.xseries.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
-        # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
-        spec.PybulletBridge.urdf = generate_urdf(spec.config.robot_type, ns="pybullet_urdf")
-        spec.PybulletBridge.basePosition = spec.config.base_pos
-        spec.PybulletBridge.baseOrientation = spec.config.base_or
-        spec.PybulletBridge.fixed_base = spec.config.fixed_base
-        spec.PybulletBridge.self_collision = spec.config.self_collision
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
+        spec.PybulletEngine.urdf = generate_urdf(spec.config.robot_type, ns="pybullet_urdf")
+        spec.PybulletEngine.basePosition = spec.config.base_pos
+        spec.PybulletEngine.baseOrientation = spec.config.base_or
+        spec.PybulletEngine.fixed_base = spec.config.fixed_base
+        spec.PybulletEngine.self_collision = spec.config.self_collision
 
         # Determine gripper min/max
-        urdf = URDF.from_parameter_server(spec.PybulletBridge.urdf)
+        urdf = URDF.from_parameter_server(spec.PybulletEngine.urdf)
         lower, upper = [], []
         for name in spec.config.gripper_names:
             joint_obj = next((joint for joint in urdf.joints if joint.name == name), None)
@@ -202,13 +199,13 @@ class Xseries(Object):
 
         # Create engine_states (no agnostic states defined in this case)
         joints = spec.config.joint_names
-        spec.PybulletBridge.states.gripper = EngineState.make("PbXseriesGripper", spec.config.gripper_names, constant, scale)
-        spec.PybulletBridge.states.pos = EngineState.make("JointState", joints=joints, mode="position")
-        spec.PybulletBridge.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
+        spec.PybulletEngine.states.gripper = EngineState.make("PbXseriesGripper", spec.config.gripper_names, constant, scale)
+        spec.PybulletEngine.states.pos = EngineState.make("JointState", joints=joints, mode="position")
+        spec.PybulletEngine.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
-            spec.PybulletBridge.states.gripper.fixed = True
+            spec.PybulletEngine.states.gripper.fixed = True
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
@@ -278,19 +275,19 @@ class Xseries(Object):
         # graph.is_valid(plot=True)
 
     @staticmethod
-    @register.bridge(entity_id, RealBridge)
-    def reality_bridge(spec: ObjectSpec, graph: EngineGraph):
+    @register.engine(entity_id, RealEngine)
+    def reality_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (reality) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import eagerx_interbotix.xseries.real  # noqa # pylint: disable=unused-import
 
         # Determine gripper min/max
         # Create engine_states (no agnostic states defined in this case)
-        # todo: Where do we launch the driver file? In this bridge? How to launch in namespace (based on robot_name + ns)?
+        # todo: Where do we launch the driver file? In this engine? How to launch in namespace (based on robot_name + ns)?
         # todo: test with rviz (give as a separate option?)
-        spec.RealBridge.states.gripper = EngineState.make("DummyState")
-        spec.RealBridge.states.pos = EngineState.make("DummyState")
-        spec.RealBridge.states.vel = EngineState.make("DummyState")
+        spec.RealEngine.states.gripper = EngineState.make("DummyState")
+        spec.RealEngine.states.pos = EngineState.make("DummyState")
+        spec.RealEngine.states.vel = EngineState.make("DummyState")
 
         # Create sensor engine nodes
         # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)

@@ -6,7 +6,7 @@ class DummyState(EngineState):
     @staticmethod
     @register.spec("DummyState", EngineState)
     def spec(spec):
-        spec.initialize(DummyState)
+        pass
 
     def initialize(self):
         pass

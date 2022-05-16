@@ -3,7 +3,7 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image
 
 # EAGERx IMPORTS
-from eagerx_pybullet.bridge import PybulletBridge
+from eagerx_pybullet.engine import PybulletEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
@@ -89,9 +89,6 @@ class Camera(Object):
         calibration_link: str = None,
     ):
         """Object spec of Camera"""
-        # Performs all the steps to fill-in the params with registered info about all functions.
-        Camera.initialize_spec(spec)
-
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
@@ -112,30 +109,30 @@ class Camera(Object):
         Camera.agnostic(spec, rate)
 
     @staticmethod
-    @register.bridge(entity_id, PybulletBridge)
-    def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
+    @register.engine(entity_id, PybulletEngine)
+    def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import eagerx_interbotix.solid.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
-        # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
         import pybullet_data
 
         urdf = spec.config.urdf
-        spec.PybulletBridge.urdf = (
+        spec.PybulletEngine.urdf = (
             urdf if isinstance(urdf, str) else "%s/%s.urdf" % (pybullet_data.getDataPath(), "cube_small")
         )
         # Initial position of baselink when urdf is loaded. Overwritten by state during the reset.
-        spec.PybulletBridge.basePosition = spec.config.base_pos
+        spec.PybulletEngine.basePosition = spec.config.base_pos
         # Initial orientation of baselink when urdf is loaded. Overwritten by state during the reset.
-        spec.PybulletBridge.baseOrientation = spec.config.base_or
-        spec.PybulletBridge.fixed_base = spec.config.fixed_base
-        spec.PybulletBridge.self_collision = spec.config.self_collision
+        spec.PybulletEngine.baseOrientation = spec.config.base_or
+        spec.PybulletEngine.fixed_base = spec.config.fixed_base
+        spec.PybulletEngine.self_collision = spec.config.self_collision
 
         # Create engine_states (no agnostic states defined in this case)
-        spec.PybulletBridge.states.pos = EngineState.make("LinkState", mode="position", link=spec.config.calibration_link)
-        spec.PybulletBridge.states.orientation = EngineState.make(
+        spec.PybulletEngine.states.pos = EngineState.make("LinkState", mode="position", link=spec.config.calibration_link)
+        spec.PybulletEngine.states.orientation = EngineState.make(
             "LinkState", mode="orientation", link=spec.config.calibration_link
         )
 

@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.6 (2022-05-16)
+### Fix
+* Update dependencies ([`aef23ae`](https://github.com/eager-dev/eagerx_interbotix/commit/aef23ae0a89427ca3fe77b12db91dca494f0d881))
+* Refactor bridge to engine ([`5864754`](https://github.com/eager-dev/eagerx_interbotix/commit/586475442aafdf33a2790f796a0eab8a455a4372))
+* Update lock ([`5b222f0`](https://github.com/eager-dev/eagerx_interbotix/commit/5b222f0a82a72e0cc933c33b2caec668c83075f0))
+* Remove initialize_spec ([`2c5a1e2`](https://github.com/eager-dev/eagerx_interbotix/commit/2c5a1e274b185b7a52352bdd4ea64e357b274cd1))
+
+### Documentation
+* Update  bibtex typo ([`5aae4ff`](https://github.com/eager-dev/eagerx_interbotix/commit/5aae4ff22a41d4cfd49e7ae04a9596c00829c850))
+
 ## v0.1.5 (2022-04-26)
 ### Fix
 * Update pytest, flake8 ([`c5d0cba`](https://github.com/eager-dev/eagerx_interbotix/commit/c5d0cba010570e27f84086dc000fe44e562c2912))

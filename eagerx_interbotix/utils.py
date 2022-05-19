@@ -1,3 +1,5 @@
+from matplotlib import animation
+import matplotlib.pyplot as plt
 import os
 import eagerx_interbotix
 import rospy
@@ -66,3 +68,54 @@ def generate_urdf(
 
     # Write to tmp file
     #
+
+
+def add_manipulator(graph, name="arm", robot_model="vx300s", sensors=["ee_pos"], actuators=["vel_control"], states=["pos", "vel", "gripper"], base_orientation=None, base_pos=None, rate=20):
+    import eagerx
+
+    # Create arm
+    arm = eagerx.Object.make(
+        "Xseries",
+        name,
+        robot_model,
+        sensors=["pos", "vel", "ee_pos"],
+        actuators=["vel_control"],
+        states=["pos", "vel", "gripper"],
+        rate=rate,
+        base_pos=base_pos,
+        base_or=base_orientation,
+    )
+    graph.add(arm)
+
+    if "pos" in sensors:
+        graph.connect(source=arm.sensors.pos, observation=f"{name}_joints")
+    if "vel" in sensors:
+        graph.connect(source=arm.sensors.vel, observation=f"{name}_velocity")
+    if "ee_pos" in sensors:
+        graph.connect(source=arm.sensors.ee_pos, observation=f"{name}_ee_position")
+    if "vel_control" in actuators:
+        graph.connect(action=f"{name}_vel_control", target=arm.actuators.vel_control)
+    return arm
+
+
+def save_frames_as_gif(dt, frames, path='.', filename='swimm_animation.gif', dpi=15):
+    # Mess with this to change frame size
+    fig = plt.figure(figsize=(frames[0].shape[1] / 72, frames[0].shape[0] / 72.0), dpi=dpi)
+    ax = fig.gca()
+    ax.set_axis_off()
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0,
+                        hspace=0, wspace=0)
+    plt.margins(0, 0)
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+
+    patch = plt.imshow(frames[0])
+    plt.axis('off')
+
+    def animate(i):
+        patch.set_data(frames[i])
+
+    anim = animation.FuncAnimation(plt.gcf(), animate, frames=len(frames), interval=50)
+    anim.save('%s/%s' % (path, filename), writer='Pillow', fps=int(1 / dt))
+    plt.close(fig)
+    print('Gif saved to %s/%s' % (path, filename))

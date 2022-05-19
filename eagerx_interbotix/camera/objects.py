@@ -3,7 +3,9 @@ from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image
 
 # EAGERx IMPORTS
+import eagerx
 from eagerx_pybullet.engine import PybulletEngine
+from eagerx_reality.engine import RealEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
@@ -25,6 +27,7 @@ class Camera(Object):
         render_shape=[480, 640],
         optical_link=None,
         calibration_link=None,
+        camera_index=0,
     )
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Camera"""
@@ -87,6 +90,7 @@ class Camera(Object):
         urdf: str = None,
         optical_link: str = None,
         calibration_link: str = None,
+        camera_index: int = 0,
     ):
         """Object spec of Camera"""
         # Modify default agnostic params
@@ -101,9 +105,10 @@ class Camera(Object):
         spec.config.base_or = base_or if isinstance(base_or, list) else [0, 0, 0, 1]
         spec.config.self_collision = self_collision
         spec.config.fixed_base = fixed_base
-        spec.config.render_shape = render_shape if isinstance(render_shape, list) else [200, 300]
+        spec.config.render_shape = render_shape if isinstance(render_shape, list) else [480, 480]
         spec.config.optical_link = optical_link if isinstance(optical_link, str) else None
         spec.config.calibration_link = calibration_link if isinstance(calibration_link, str) else None
+        spec.config.camera_index = camera_index
 
         # Add agnostic implementation
         Camera.agnostic(spec, rate)
@@ -167,3 +172,26 @@ class Camera(Object):
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
+
+    @staticmethod
+    @register.engine(entity_id, RealEngine)
+    def real_engine(spec: ObjectSpec, graph: EngineGraph):
+        """Engine-specific implementation (Pybullet) of the object."""
+        from eagerx_interbotix.camera.real import enginestates
+        # Couple engine states
+        spec.RealEngine.states.pos = EngineState.make("Dummy")
+        spec.RealEngine.states.orientation = EngineState.make("Dummy")
+
+        # Create sensor engine nodes
+        # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
+        rgb = EngineNode.make(
+            "CameraRender",
+            "image",
+            camera_idx=spec.config.camera_index,
+            shape=spec.config.render_shape,
+            rate=spec.sensors.rgb.rate,
+            process=eagerx.process.NEW_PROCESS,
+        )
+        graph.add([rgb])
+        graph.connect(source=rgb.outputs.image, sensor="rgb")
+

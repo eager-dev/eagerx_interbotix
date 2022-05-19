@@ -112,6 +112,7 @@ class XseriesArm(EngineNode):
 
     @register.states()
     def reset(self):
+        self.last_cmd = None
         pass
 
     @register.inputs(tick=UInt64, action=Float32MultiArray)
@@ -124,7 +125,10 @@ class XseriesArm(EngineNode):
     ):
         positions = action.msgs[-1].data
         indexed_positions = [positions[i] for i in self.joint_indices]
-        self.arm.set_joint_positions(indexed_positions, moving_time=4 / self.rate, accel_time=1 / self.rate, blocking=False)
+        if not self.last_cmd == indexed_positions:
+            self.last_cmd = indexed_positions
+            self.arm.set_joint_positions(indexed_positions, moving_time=2.5, accel_time=0.3, blocking=False)
+            # self.arm.set_joint_positions(indexed_positions, moving_time=4 / self.rate, accel_time=1 / self.rate, blocking=False)
         # Send action that has been applied.
         return dict(action_applied=action.msgs[-1])
 

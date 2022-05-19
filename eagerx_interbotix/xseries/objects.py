@@ -106,7 +106,7 @@ class Xseries(Object):
     def spec(
         spec: ObjectSpec,
         name: str,
-        robot_type: str,
+        robot_type: str = "vx300s",
         sensors=None,
         actuators=None,
         states=None,
@@ -148,7 +148,7 @@ class Xseries(Object):
         # Modify default config
         spec.config.name = name
         spec.config.sensors = sensors if sensors else ["pos"]
-        spec.config.actuators = actuators if actuators else ["pos_control", "gripper_control"]
+        spec.config.actuators = actuators if actuators else ["vel_control"]
         spec.config.states = states if states else ["pos", "vel", "gripper"]
 
         # Add registered config params

@@ -22,8 +22,15 @@ import os
 # NOT SAFE BOX (FAILING)
 NAME = "box_dynamicsRandomization_2022-04-15-0809"
 STEPS = 1200000
+
+use_safe = True
+workspace = "eagerx_interbotix.safety.workspaces/exclude_ground" if use_safe else "eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m"
+use_safe = "safe" if use_safe else "unsafe"
+
 MODEL_NAME = f"{NAME}/model_{STEPS}"
-LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{MODEL_NAME}"
+ANIM_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}"
+LOG_DIR = f"{ANIM_DIR}/model_{STEPS}"
+# LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{MODEL_NAME}"
 if __name__ == "__main__":
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
@@ -31,7 +38,7 @@ if __name__ == "__main__":
     real_reset = False
     rate = 20
     safe_rate = 20
-    max_steps = 200
+    max_steps = 100
 
     # Initialize empty graph
     graph = Graph.create()
@@ -84,8 +91,7 @@ if __name__ == "__main__":
     # Create safety node
     c = arm.config
     collision = dict(
-        workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
-        # workspace="eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m",
+        workspace=workspace,
         margin=0.00,  # [cm]
         gui=False,
         robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
@@ -101,7 +107,6 @@ if __name__ == "__main__":
         checks=3,
         collision=collision,
     )
-    graph.add(safe)
 
     # Connecting observations
     graph.connect(source=arm.sensors.pos, observation="joints")
@@ -109,6 +114,7 @@ if __name__ == "__main__":
     graph.connect(source=arm.sensors.vel, observation="velocity")
     graph.connect(source=solid.sensors.pos, observation="solid")
     graph.connect(source=goal.sensors.pos, observation="goal")
+    graph.add(safe)
     # Connecting actions
     graph.connect(action="velocity", target=safe.inputs.goal)
     # Connecting safety filter to arm
@@ -183,56 +189,61 @@ if __name__ == "__main__":
         return obs, rwd, done, info
 
     # Define reset function (fixed goal)
-    def reset_fn(env):
-        states = env.state_space.sample()
+    if NAME == "box_dynamicsRandomization_2022-04-15-0809":
+        def reset_fn(env):
+            states = env.state_space.sample()
 
-        # Set camera position
-        # states["cam/pos"] = [0.83, 0.0181, 0.75]
-        states["cam/pos"] = np.array([1.2, 0.0181, 1.0], dtype="float32")
+            # Set camera position
+            # states["cam/pos"] = [0.83, 0.0181, 0.75]
+            states["cam/pos"] = np.array([1.2, 0.0181, 1.0], dtype="float32")
 
-        # Set orientation
-        states["goal/orientation"] = np.array([0, 0, 0, 1])
-        states["solid/orientation"] = states["goal/orientation"]
+            # Set orientation
+            states["goal/orientation"] = np.array([0, 0, 0, 1])
+            states["solid/orientation"] = states["goal/orientation"]
 
-        # Sample new starting state (at least 17 cm from goal)
-        z = 0.035
-        dx = np.random.uniform(low=-0.03, high=0.03)
-        dy = np.random.uniform(low=-0.03, high=0.03)
-        states["solid/pos"] = np.array([0.4 + dx, -0.2 + dy, z])
-        states["goal/pos"] = np.array([0.4, 0.2, z])
+            # Sample new starting state (at least 17 cm from goal)
+            z = 0.035
+            dx = np.random.uniform(low=-0.03, high=0.03)
+            dy = np.random.uniform(low=-0.03, high=0.03)
+            states["solid/pos"] = np.array([0.4 + dx, -0.2 + dy, z])
+            states["goal/pos"] = np.array([0.4, 0.2, z])
 
-        # Set gripper to closed position
-        states["viper/gripper"][0] = 0
-        return states
+            # Set gripper to closed position
+            states["viper/gripper"][0] = 0
+            return states
+    else:
+        # Define reset function (radius)
+        def reset_fn(env):
+            states = env.state_space.sample()
 
-    # Define reset function (radius)
-    # def reset_fn(env):
-    #     states = env.state_space.sample()
-    #
-    #     # Set orientation
-    #     states["goal/orientation"] = np.array([0, 0, 0, 1])
-    #     states["solid/orientation"] = states["goal/orientation"]
-    #
-    #     # Sample new starting state (at least 17 cm from goal)
-    #     z = 0.035
-    #     radius = 0.21
-    #     goal_pos = np.array([0.35, 0, z])
-    #     while True:
-    #         can_pos = np.concatenate(
-    #             [
-    #                 np.random.uniform(low=0, high=0.4 * radius, size=1),
-    #                 np.random.uniform(low=-1.2 * radius, high=1.2 * radius, size=1),
-    #                 [z],
-    #             ]
-    #         )
-    #         if np.linalg.norm(can_pos) > radius:
-    #             break
-    #     states["solid/pos"] = can_pos + goal_pos
-    #     states["goal/pos"] = goal_pos
-    #
-    #     # Set gripper to closed position
-    #     states["viper/gripper"][0] = 0
-    #     return states
+            # Set camera position
+            states["cam/pos"] = [0.83, 0.0181, 0.75]
+            states["cam/pos"] = np.array([1.2, 0.0181, 1.0], dtype="float32")
+
+            # Set orientation
+            states["goal/orientation"] = np.array([0, 0, 0, 1])
+            states["solid/orientation"] = states["goal/orientation"]
+
+            # Sample new starting state (at least 17 cm from goal)
+            z = 0.035
+            radius = 0.21
+            goal_pos = np.array([0.35, 0, z])
+            while True:
+                can_pos = np.concatenate(
+                    [
+                        np.random.uniform(low=0, high=0.4 * radius, size=1),
+                        np.random.uniform(low=-1.2 * radius, high=1.2 * radius, size=1),
+                        [z],
+                    ]
+                )
+                if np.linalg.norm(can_pos) > radius:
+                    break
+            states["solid/pos"] = can_pos + goal_pos
+            states["goal/pos"] = goal_pos
+
+            # Set gripper to closed position
+            states["viper/gripper"][0] = 0
+            return states
 
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
@@ -246,10 +257,16 @@ if __name__ == "__main__":
     env.render("human")
 
     # Evaluate
-    for eps in range(5000):
+    from animate import save_frames_as_gif
+    for eps in range(10):
         print(f"Episode {eps}")
+        frames = []
         obs, done = env.reset(), False
         while not done:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+            frames.append(rgb)
+        FILENAME = f"{use_safe}_{eps}.gif"
+        save_frames_as_gif(1/rate, frames, dpi=72, path=ANIM_DIR, filename=FILENAME)
+

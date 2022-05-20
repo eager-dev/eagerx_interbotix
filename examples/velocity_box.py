@@ -14,11 +14,11 @@ import stable_baselines3 as sb
 from datetime import datetime
 import os
 
-NAME = "box_dynamicsRandomization"
+NAME = "SAC_safeBox_radius"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
-# todo: increase weight on goal -> can distance
-# todo: vary starting position of object
+# todo: get same results with position control
+# todo: vary starting position of object around fixed goal
 # todo: slightly vary starting position of arm
 if __name__ == "__main__":
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     # Create safety node
     c = arm.config
     collision = dict(
-        # workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
-        workspace="eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m",
+        workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
+        # workspace="eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m",
         margin=0.01,  # [cm]
         gui=False,
         robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
@@ -133,7 +133,26 @@ if __name__ == "__main__":
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
         return obs, rwd, done, info
 
-    # Define reset function
+    # Define reset function (fixed goal)
+    # def reset_fn(env):
+    #     states = env.state_space.sample()
+    #
+    #     # Set orientation
+    #     states["goal/orientation"] = np.array([0, 0, 0, 1])
+    #     states["solid/orientation"] = states["goal/orientation"]
+    #
+    #     # Sample new starting state (at least 17 cm from goal)
+    #     z = 0.035
+    #     dx = np.random.uniform(low=-0.03, high=0.03)
+    #     dy = np.random.uniform(low=-0.03, high=0.03)
+    #     states["solid/pos"] = np.array([0.4 + dx, -0.2 + dy, z])
+    #     states["goal/pos"] = np.array([0.4, 0.2, z])
+    #
+    #     # Set gripper to closed position
+    #     states["viper/gripper"][0] = 0
+    #     return states
+
+    # Define reset function (radius)
     def reset_fn(env):
         states = env.state_space.sample()
 
@@ -143,10 +162,20 @@ if __name__ == "__main__":
 
         # Sample new starting state (at least 17 cm from goal)
         z = 0.035
-        dx = np.random.uniform(low=-0.03, high=0.03)
-        dy = np.random.uniform(low=-0.03, high=0.03)
-        states["solid/pos"] = np.array([0.4 + dx, -0.2 + dy, z])
-        states["goal/pos"] = np.array([0.4, 0.2, z])
+        radius = 0.21
+        goal_pos = np.array([0.35, 0, z])
+        while True:
+            can_pos = np.concatenate(
+                [
+                    np.random.uniform(low=0, high=0.4 * radius, size=1),
+                    np.random.uniform(low=-1.2 * radius, high=1.2 * radius, size=1),
+                    [z],
+                ]
+            )
+            if np.linalg.norm(can_pos) > radius:
+                break
+        states["solid/pos"] = can_pos + goal_pos
+        states["goal/pos"] = goal_pos
 
         # Set gripper to closed position
         states["viper/gripper"][0] = 0
@@ -161,11 +190,11 @@ if __name__ == "__main__":
     # Initialize model
     os.mkdir(LOG_DIR)
     graph.save(f"{LOG_DIR}/graph.yaml")
-    model = sb.PPO("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
-    # model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    # model = sb.PPO("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    model = sb.SAC("MlpPolicy", sb_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
 
     # Create experiment directory
-    delta_steps = 400000
+    delta_steps = 200000
     for i in range(1, 30):
         model.learn(delta_steps)
         model.save(f"{LOG_DIR}/model_{i*delta_steps}")

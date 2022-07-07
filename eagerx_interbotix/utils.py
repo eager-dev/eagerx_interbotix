@@ -3,8 +3,19 @@ import eagerx_interbotix
 import rospy
 import rosparam
 import yaml
-from eagerx.utils.node_utils import launch_node
-from eagerx.utils.utils import get_param_with_blocking
+from eagerx.utils.utils_sub import substitute_args
+
+
+def launch_node(launch_file, args):
+    import roslaunch
+
+    cli_args = [substitute_args(launch_file)] + args
+    roslaunch_args = cli_args[1:]
+    roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
+    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+    # roslaunch.configure_logging(uuid)  # THIS RESETS the log level. Can we do without this line? Are ROS logs stil being made?
+    launch = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
+    return launch
 
 
 def get_configs(robot_model: str, motor_config: str, mode_config: str):
@@ -58,7 +69,7 @@ def generate_urdf(
 
     # Replace mesh urls
     urdf_key = f"{ns}/{robot_model}/robot_description"
-    urdf: str = get_param_with_blocking(urdf_key)
+    urdf: str = rospy.get_param(urdf_key)
     urdf_sbtd = urdf.replace("package://interbotix_xsarm_descriptions/", module_path)
     rosparam.upload_params(urdf_key, urdf_sbtd)
 

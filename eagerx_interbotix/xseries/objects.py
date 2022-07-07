@@ -1,110 +1,45 @@
-# ROS IMPORTS
-from urdf_parser_py.urdf import URDF
-from std_msgs.msg import Float32MultiArray
-
-# EAGERx IMPORTS
+from gym.spaces import Box
+import numpy as np
+import eagerx
 from eagerx_reality.engine import RealEngine
 from eagerx_pybullet.engine import PybulletEngine
-from eagerx import Object, EngineNode, SpaceConverter, EngineState, Processor
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
+
+# ROS IMPORTS
 from eagerx_interbotix.utils import generate_urdf, get_configs
+from urdf_parser_py.urdf import URDF
 
 
-class Xseries(Object):
-    entity_id = "Xseries"
-
-    @staticmethod
-    @register.sensors(pos=Float32MultiArray, vel=Float32MultiArray, ee_pos=Float32MultiArray)
-    @register.actuators(pos_control=Float32MultiArray, vel_control=Float32MultiArray, gripper_control=Float32MultiArray)
-    @register.engine_states(pos=Float32MultiArray, vel=Float32MultiArray, gripper=Float32MultiArray)
-    @register.config(
-        robot_type=None,
-        joint_names=None,
-        gripper_names=None,
-        gripper_link=None,
-        fixed_base=True,
-        self_collision=True,
-        base_pos=None,
-        base_or=None,
-        mode_config=None,
-        motor_config=None,
-        joint_lower=None,
-        joint_upper=None,
-        vel_limit=None,
-        sleep_positions=None,
-        urdf=None,
+class Xseries(eagerx.Object):
+    @classmethod
+    @register.sensors(
+        pos=None,
+        vel=None,
+        ee_pos=Box(
+            low=np.array([-2, -2, 0], dtype="float32"),
+            high=np.array([2, 2, 2], dtype="float32"),
+        ),
     )
-    def agnostic(spec: ObjectSpec, rate):
-        """Agnostic definition of the Xseries"""
-        # Register standard converters, space_converters, and processors
-        import eagerx.converters  # noqa # pylint: disable=unused-import
-
-        # Set observation properties: (space_converters, rate, etc...)
-        spec.sensors.pos.rate = rate
-        spec.sensors.pos.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low="$(config joint_lower)",
-            high="$(config joint_upper)",
-        )
-        spec.sensors.vel.rate = rate
-        spec.sensors.vel.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[-v for v in spec.config.vel_limit],
-            high=spec.config.vel_limit,
-        )
-        spec.sensors.ee_pos.rate = rate
-        spec.sensors.ee_pos.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[-2, -2, 0],
-            high=[2, 2, 2],
-        )
-
-        # Set actuator properties: (space_converters, rate, etc...)
-        spec.actuators.pos_control.rate = rate
-        spec.actuators.vel_control.rate = rate
-        spec.actuators.gripper_control.rate = 1
-        spec.actuators.vel_control.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[-v for v in spec.config.vel_limit],
-            high=spec.config.vel_limit,
-        )
-        spec.actuators.pos_control.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low="$(config joint_lower)",
-            high="$(config joint_upper)",
-        )
-        spec.actuators.gripper_control.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", dtype="float32", low=[0], high=[1.0]
-        )
-
-        # Set model_state properties: (space_converters)
-        spec.states.pos.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=len(spec.config.joint_names) * [0],
-            high=len(spec.config.joint_names) * [0],
-        )
-        spec.states.vel.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=len(spec.config.joint_names) * [0],
-            high=len(spec.config.joint_names) * [0],
-        )
-        spec.states.gripper.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", dtype="float32", low=[0.5], high=[0.5]
-        )
-
-    @staticmethod
-    @register.spec(entity_id, Object)
-    def spec(
-        spec: ObjectSpec,
+    @register.actuators(
+        pos_control=None,
+        vel_control=None,
+        gripper_control=Box(
+            low=np.array([0], dtype="float32"),
+            high=np.array([1], dtype="float32"),
+        ),
+    )
+    @register.engine_states(
+        pos=None,
+        vel=None,
+        gripper=Box(
+            low=np.array([0.5], dtype="float32"),
+            high=np.array([0.5], dtype="float32"),
+        ),
+    )
+    def make(
+        cls,
         name: str,
         robot_type: str,
         sensors=None,
@@ -117,8 +52,10 @@ class Xseries(Object):
         fixed_base=True,
         motor_config=None,
         mode_config=None,
-    ):
+    ) -> ObjectSpec:
         """Object spec of Xseries"""
+        spec = cls.get_specification()
+
         # Extract info on xseries arm from assets
         motor_config, mode_config = get_configs(robot_type, motor_config, mode_config)
         urdf = URDF.from_parameter_server(generate_urdf(robot_type, ns="pybullet_urdf"))
@@ -145,6 +82,13 @@ class Xseries(Object):
             joint_upper.append(joint_obj.limit.upper)
             vel_limit.append(joint_obj.limit.velocity)
 
+        # Determine gripper limits
+        gripper_lower, gripper_upper = [], []
+        for name in gripper_names:
+            joint_obj = next((joint for joint in urdf.joints if joint.name == name), None)
+            gripper_lower.append(joint_obj.limit.lower)
+            gripper_upper.append(joint_obj.limit.upper)
+
         # Modify default config
         spec.config.name = name
         spec.config.sensors = sensors if sensors else ["pos"]
@@ -168,27 +112,44 @@ class Xseries(Object):
         spec.config.sleep_positions = sleep_positions
         spec.config.urdf = urdf.to_xml_string()
 
-        # Add agnostic implementation
-        Xseries.agnostic(spec, rate)
+        # Set rates
+        spec.sensors.pos.rate = rate
+        spec.sensors.vel.rate = rate
+        spec.sensors.ee_pos.rate = rate
+        spec.actuators.pos_control.rate = rate
+        spec.actuators.vel_control.rate = rate
+        spec.actuators.gripper_control.rate = 1
+
+        # Set variable spaces
+        spec.sensors.pos.space = Box(low=np.array(joint_lower, dtype="float32"), high=np.array(joint_upper, dtype="float32"))
+        spec.sensors.vel.space = Box(low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32"))
+        spec.actuators.pos_control.space = Box(
+            low=np.array(joint_lower, dtype="float32"), high=np.array(joint_upper, dtype="float32")
+        )
+        spec.actuators.vel_control.space = Box(
+            low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32")
+        )
+        spec.states.pos.space = Box(
+            low=np.zeros(len(joint_lower), dtype="float32"), high=np.zeros(len(joint_lower), dtype="float32")
+        )
+        spec.states.vel.space = Box(
+            low=np.zeros(len(joint_lower), dtype="float32"), high=np.zeros(len(joint_lower), dtype="float32")
+        )
+        return spec
 
     @staticmethod
-    # This decorator pre-initializes engine implementation with default object_params
-    @register.engine(entity_id, PybulletEngine)
+    @register.engine(PybulletEngine)
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this engine
-        import eagerx_interbotix.xseries.pybullet  # noqa # pylint: disable=unused-import
-        import eagerx_pybullet  # noqa # pylint: disable=unused-import
-
         # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
-        spec.PybulletEngine.urdf = generate_urdf(spec.config.robot_type, ns="pybullet_urdf")
-        spec.PybulletEngine.basePosition = spec.config.base_pos
-        spec.PybulletEngine.baseOrientation = spec.config.base_or
-        spec.PybulletEngine.fixed_base = spec.config.fixed_base
-        spec.PybulletEngine.self_collision = spec.config.self_collision
+        spec.engine.urdf = spec.config.urdf
+        spec.engine.basePosition = spec.config.base_pos
+        spec.engine.baseOrientation = spec.config.base_or
+        spec.engine.fixed_base = spec.config.fixed_base
+        spec.engine.self_collision = spec.config.self_collision
 
         # Determine gripper min/max
-        urdf = URDF.from_parameter_server(spec.PybulletEngine.urdf)
+        urdf = URDF.from_parameter_server(generate_urdf(spec.config.robot_type, ns="pybullet_urdf"))
         lower, upper = [], []
         for name in spec.config.gripper_names:
             joint_obj = next((joint for joint in urdf.joints if joint.name == name), None)
@@ -198,25 +159,24 @@ class Xseries(Object):
         scale = upper[0] - lower[0]
 
         # Create engine_states (no agnostic states defined in this case)
+        from eagerx_interbotix.xseries.pybullet.enginestates import PbXseriesGripper
+        from eagerx_pybullet.enginestates import JointState
+
         joints = spec.config.joint_names
-        spec.PybulletEngine.states.gripper = EngineState.make("PbXseriesGripper", spec.config.gripper_names, constant, scale)
-        spec.PybulletEngine.states.pos = EngineState.make("JointState", joints=joints, mode="position")
-        spec.PybulletEngine.states.vel = EngineState.make("JointState", joints=joints, mode="velocity")
+        spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
+        spec.engine.states.pos = JointState.make(joints=joints, mode="position")
+        spec.engine.states.vel = JointState.make(joints=joints, mode="velocity")
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
-            spec.PybulletEngine.states.gripper.fixed = True
+            spec.engine.states.gripper.fixed = True
 
         # Create sensor engine nodes
-        # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
-        pos_sensor = EngineNode.make(
-            "JointSensor", "pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position"
-        )
-        vel_sensor = EngineNode.make(
-            "JointSensor", "vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity"
-        )
-        ee_pos_sensor = EngineNode.make(
-            "LinkSensor",
+        from eagerx_pybullet.enginenodes import LinkSensor, JointSensor, JointController
+
+        pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position")
+        vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity")
+        ee_pos_sensor = LinkSensor.make(
             "ee_pos_sensor",
             rate=spec.sensors.ee_pos.rate,
             process=2,
@@ -226,8 +186,7 @@ class Xseries(Object):
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
-        pos_control = EngineNode.make(
-            "JointController",
+        pos_control = JointController.make(
             "pos_control",
             rate=spec.actuators.pos_control.rate,
             process=2,
@@ -238,8 +197,7 @@ class Xseries(Object):
             vel_gain=len(joints) * [1.0],
             max_force=len(joints) * [2.0],
         )
-        vel_control = EngineNode.make(
-            "JointController",
+        vel_control = JointController.make(
             "vel_control",
             rate=spec.actuators.pos_control.rate,
             process=2,
@@ -248,8 +206,7 @@ class Xseries(Object):
             vel_gain=len(joints) * [1.0],
             max_force=len(joints) * [2.0],
         )
-        gripper = EngineNode.make(
-            "JointController",
+        gripper = JointController.make(
             "gripper_control",
             rate=spec.actuators.gripper_control.rate,
             process=2,
@@ -260,7 +217,9 @@ class Xseries(Object):
             vel_gain=[1.0, 1.0],
             max_force=[2.0, 2.0],
         )
-        gripper.inputs.action.converter = Processor.make("MirrorAction", index=0, constant=constant, scale=scale)
+        from eagerx_interbotix.xseries.processor import MirrorAction
+
+        gripper.inputs.action.processor = MirrorAction.make(index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
         graph.add([pos_sensor, vel_sensor, ee_pos_sensor, pos_control, vel_control, gripper])
@@ -271,45 +230,34 @@ class Xseries(Object):
         graph.connect(actuator="vel_control", target=vel_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)
 
-        # Check graph validity (commented out)
-        # graph.is_valid(plot=True)
-
     @staticmethod
-    @register.engine(entity_id, RealEngine)
+    @register.engine(RealEngine)
     def reality_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (reality) of the object."""
         # Import any object specific entities for this engine
         import eagerx_interbotix.xseries.real  # noqa # pylint: disable=unused-import
 
         # Determine gripper min/max
-        # Create engine_states (no agnostic states defined in this case)
-        # todo: Where do we launch the driver file? In this engine? How to launch in namespace (based on robot_name + ns)?
-        # todo: test with rviz (give as a separate option?)
-        spec.RealEngine.states.gripper = EngineState.make("DummyState")
-        spec.RealEngine.states.pos = EngineState.make("DummyState")
-        spec.RealEngine.states.vel = EngineState.make("DummyState")
+        from eagerx_interbotix.xseries.real.enginestates import DummyState
+        spec.engine.states.gripper = DummyState.make()
+        spec.engine.states.pos = DummyState.make()
+        spec.engine.states.vel = DummyState.make()
 
         # Create sensor engine nodes
-        # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
+        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
         joints = spec.config.joint_names
-        pos_sensor = EngineNode.make(
-            "XseriesSensor", "pos_sensor", rate=spec.sensors.pos.rate, joints=joints, process=2, mode="position"
-        )
-        vel_sensor = EngineNode.make(
-            "XseriesSensor", "vel_sensor", rate=spec.sensors.vel.rate, joints=joints, process=2, mode="velocity"
-        )
+        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.pos.rate, joints=joints, process=2, mode="position")
+        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.vel.rate, joints=joints, process=2, mode="velocity")
 
         # Create actuator engine nodes
-        # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
-        pos_control = EngineNode.make(
-            "XseriesArm",
+        pos_control = XseriesArm.make(
             "pos_control",
             rate=spec.actuators.pos_control.rate,
             joints=joints,
             process=2,
             mode="position_control",
         )
-        gripper = EngineNode.make("XseriesGripper", "gripper_control", rate=spec.actuators.gripper_control.rate, process=2)
+        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate, process=2)
 
         # Connect all engine nodes
         graph.add([pos_sensor, vel_sensor, pos_control, gripper])

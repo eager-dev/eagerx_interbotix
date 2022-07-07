@@ -1,25 +1,22 @@
 from typing import Optional, List, Dict
-
 from collections import deque
-from urdf_parser_py.urdf import URDF
+from gym.spaces import Box, Discrete
 import numpy as np
 
-# IMPORT ROS
-from std_msgs.msg import Float32MultiArray, UInt64
-
-# IMPORT EAGERX
+import eagerx
+from eagerx.core.specs import NodeSpec
 import eagerx.core.register as register
-from eagerx.utils.utils import Msg, get_attribute_from_module
-from eagerx.core.entities import Node, SpaceConverter
-from eagerx.core.constants import process as p
+from eagerx.utils.utils import Msg, load
 from eagerx_interbotix.safety import collision as col
 
+# ROS imports
+from urdf_parser_py.urdf import URDF
 
-class SafePositionControl(Node):
-    @staticmethod
-    @register.spec("SafePositionControl", Node)
-    def spec(
-        spec,
+
+class SafePositionControl(eagerx.Node):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
         joints: List[int],
@@ -29,14 +26,13 @@ class SafePositionControl(Node):
         duration: Optional[float] = None,
         checks: int = 2,
         collision: Dict = None,
-        process: Optional[int] = p.NEW_PROCESS,
-        color: Optional[str] = "grey",
-    ):
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "grey",
+    ) -> NodeSpec:
         """
         Filters goal joint positions that cause self-collisions or are below a certain height.
         Also check velocity limits.
 
-        :param spec: Not provided by user.
         :param name: Node name
         :param rate: Rate at which callback is called.
         :param joints: joint names
@@ -48,8 +44,10 @@ class SafePositionControl(Node):
         :param collision: A dict with the robot & workspace specification.
         :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
-        :return:
+        :return: Node specification.
         """
+        spec = cls.get_specification()
+
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -69,50 +67,36 @@ class SafePositionControl(Node):
         # Collision detector
         spec.config.collision = collision if isinstance(collision, dict) else None
 
-        # Add converter & space_converter
-        spec.inputs.goal.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
-        )
-        spec.inputs.current.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
-        )
-        spec.outputs.filtered.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
-        )
+        # Add converter & space
+        spec.inputs.goal.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.inputs.current.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.outputs.filtered.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        return spec
 
-    def initialize(
-        self,
-        joints: List[str],
-        upper: List[float],
-        lower: List[float],
-        vel_limit: List[float],
-        duration: float,
-        checks: int,
-        collision: dict,
-    ):
-        self.joints = joints
-        self.upper = np.array(upper, dtype="float")
-        self.lower = np.array(lower, dtype="float")
-        self.vel_limit = np.array(vel_limit, dtype="float")
-        self.duration = duration
-        self.checks = checks
+    def initialize(self, spec: NodeSpec):
+        self.joints = spec.config.joints
+        self.upper = np.array(spec.config.upper, dtype="float")
+        self.lower = np.array(spec.config.lower, dtype="float")
+        self.vel_limit = np.array(spec.config.vel_limit, dtype="float")
+        self.duration = spec.config.duration
+        self.checks = spec.config.checks
         self.dt = 1 / self.rate
 
         # Setup collision detector
-        self.collision = collision
-        if collision is not None:
+        self.collision = spec.config.collision
+        if self.collision is not None:
             self.collision_check = True
             # Setup physics server for collision checking
             import pybullet
 
-            if collision.get("gui", False):
+            if self.collision.get("gui", False):
                 self.col_id = pybullet.connect(pybullet.GUI)
             else:
                 self.col_id = pybullet.connect(pybullet.DIRECT)
             # Load workspace
-            bodies = get_attribute_from_module(collision["workspace"])(self.col_id)
+            bodies = load(self.collision["workspace"])(self.col_id)
             # Generate robot urdf (if not a path but a text file)
-            r = collision["robot"]
+            r = self.collision["robot"]
             if r["urdf"].endswith(".urdf"):  # Full path specified
                 fileName = r["urdf"]
             else:  # First write to /tmp file (else pybullet cannot load urdf)
@@ -132,12 +116,12 @@ class SafePositionControl(Node):
             )
             urdf = URDF.from_xml_file(fileName)
             # Determine collision pairs
-            self_collision_pairs, workspace_pairs = col.get_named_collision_pairs(bodies, urdf, joints)
+            self_collision_pairs, workspace_pairs = col.get_named_collision_pairs(bodies, urdf, self.joints)
             # Create collision detector
-            self.self_collision = col.CollisionDetector(self.col_id, bodies, joints, self_collision_pairs)
-            self.workspace = col.CollisionDetector(self.col_id, bodies, joints, workspace_pairs)
+            self.self_collision = col.CollisionDetector(self.col_id, bodies, self.joints, self_collision_pairs)
+            self.workspace = col.CollisionDetector(self.col_id, bodies, self.joints, workspace_pairs)
             # Set distance at which objects are considered in collision.
-            self.margin = collision.get("margin", 0.0)
+            self.margin = self.collision.get("margin", 0.0)
             # self._test_collision_tester(joints)
         else:
             self.collision_check = False
@@ -162,8 +146,8 @@ class SafePositionControl(Node):
         self.safe_poses = deque(maxlen=10)
         self.consecutive_unsafe = 0
 
-    @register.inputs(goal=Float32MultiArray, current=Float32MultiArray)
-    @register.outputs(filtered=Float32MultiArray, in_collision=UInt64)
+    @register.inputs(goal=None, current=None)
+    @register.outputs(filtered=None, in_collision=Discrete(3))
     def callback(self, t_n: float, goal: Msg = None, current: Msg = None):
         goal = np.array(goal.msgs[-1].data, dtype="float32")
         current = np.array(current.msgs[-1].data, dtype="float32")
@@ -174,17 +158,17 @@ class SafePositionControl(Node):
                 self.self_collision.in_collision(q=current, margin=self.margin)
                 and self.self_collision.get_distance().min() < 0
             ):
-                # rospy.loginfo(f"[self_collision]: margin = {self.margin} | ds = {self.self_collision.get_distance().min()}")
-                in_collision = UInt64(data=1)
+                # self.backend.loginfo(f"[self_collision]: margin = {self.margin} | ds = {self.self_collision.get_distance().min()}")
+                in_collision = np.array(1, dtype="int64")
             elif self.workspace.in_collision(margin=self.margin) and self.workspace.get_distance().min() < 0:
-                # rospy.loginfo(f"[workspace]: margin = {self.margin} | ds = {self.workspace.get_distance().min()}")
-                in_collision = UInt64(data=2)
+                # self.backend.loginfo(f"[workspace]: margin = {self.margin} | ds = {self.workspace.get_distance().min()}")
+                in_collision = np.array(2, dtype="int64")
             else:
-                in_collision = UInt64(data=0)
+                in_collision = np.array(0, dtype="int64")
                 if self.consecutive_unsafe == 0:
                     self.safe_poses.append(current)
         else:
-            in_collision = UInt64(data=0)
+            in_collision = np.array(0, dtype="int64")
 
         # Clip to joint limits
         filtered = np.clip(goal, self.lower, self.upper, dtype="float32")
@@ -216,15 +200,14 @@ class SafePositionControl(Node):
                     self.consecutive_unsafe = 0
         else:
             self.consecutive_unsafe = 0
-            in_collision = UInt64(data=0)
-        return dict(filtered=Float32MultiArray(data=filtered), in_collision=in_collision)
+            in_collision = np.array(0, dtype="int64")
+        return dict(filtered=filtered, in_collision=in_collision)
 
 
-class SafeVelocityControl(Node):
-    @staticmethod
-    @register.spec("SafeVelocityControl", Node)
-    def spec(
-        spec,
+class SafeVelocityControl(eagerx.Node):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
         joints: List[int],
@@ -234,14 +217,13 @@ class SafeVelocityControl(Node):
         duration: Optional[float] = None,
         checks: int = 2,
         collision: Dict = None,
-        process: Optional[int] = p.NEW_PROCESS,
-        color: Optional[str] = "grey",
-    ):
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "grey",
+    ) -> NodeSpec:
         """
         Filters goal joint positions that cause self-collisions or are below a certain height.
         Also check velocity limits.
 
-        :param spec: Not provided by user.
         :param name: Node name
         :param rate: Rate at which callback is called.
         :param joints: joint names
@@ -253,8 +235,10 @@ class SafeVelocityControl(Node):
         :param collision: A dict with the robot & workspace specification.
         :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
-        :return:
+        :return: Node specification.
         """
+        spec = cls.get_specification()
+
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -274,50 +258,36 @@ class SafeVelocityControl(Node):
         # Collision detector
         spec.config.collision = collision if isinstance(collision, dict) else None
 
-        # Add converter & space_converter
-        spec.inputs.goal.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", [-v for v in vel_limit], vel_limit, dtype="float32"
-        )
-        spec.inputs.position.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
-        )
-        spec.outputs.filtered.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray", "$(config lower)", "$(config upper)", dtype="float32"
-        )
+        # Set variable spaces
+        spec.inputs.goal.space = Box(low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32"))
+        spec.inputs.position.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.outputs.filtered.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        return spec
 
-    def initialize(
-        self,
-        joints: List[str],
-        upper: List[float],
-        lower: List[float],
-        vel_limit: List[float],
-        duration: float,
-        checks: int,
-        collision: dict,
-    ):
-        self.joints = joints
-        self.upper = np.array(upper, dtype="float")
-        self.lower = np.array(lower, dtype="float")
-        self.vel_limit = np.array(vel_limit, dtype="float")
-        self.duration = duration
-        self.checks = checks
+    def initialize(self, spec: NodeSpec):
+        self.joints = spec.config.joints
+        self.upper = np.array(spec.config.upper, dtype="float")
+        self.lower = np.array(spec.config.lower, dtype="float")
+        self.vel_limit = np.array(spec.config.vel_limit, dtype="float")
+        self.duration = spec.config.duration
+        self.checks = spec.config.checks
         self.dt = 1 / self.rate
 
         # Setup collision detector
-        self.collision = collision
-        if collision is not None:
+        self.collision = spec.config.collision
+        if self.collision is not None:
             self.collision_check = True
             # Setup physics server for collision checking
             import pybullet
 
-            if collision.get("gui", False):
+            if self.collision.get("gui", False):
                 self.col_id = pybullet.connect(pybullet.GUI)
             else:
                 self.col_id = pybullet.connect(pybullet.DIRECT)
             # Load workspace
-            bodies = get_attribute_from_module(collision["workspace"])(self.col_id)
+            bodies = load(self.collision["workspace"])(self.col_id)
             # Generate robot urdf (if not a path but a text file)
-            r = collision["robot"]
+            r = self.collision["robot"]
             if r["urdf"].endswith(".urdf"):  # Full path specified
                 fileName = r["urdf"]
             else:  # First write to /tmp file (else pybullet cannot load urdf)
@@ -337,12 +307,12 @@ class SafeVelocityControl(Node):
             )
             urdf = URDF.from_xml_file(fileName)
             # Determine collision pairs
-            self_collision_pairs, workspace_pairs = col.get_named_collision_pairs(bodies, urdf, joints)
+            self_collision_pairs, workspace_pairs = col.get_named_collision_pairs(bodies, urdf, self.joints)
             # Create collision detector
-            self.self_collision = col.CollisionDetector(self.col_id, bodies, joints, self_collision_pairs)
-            self.workspace = col.CollisionDetector(self.col_id, bodies, joints, workspace_pairs)
+            self.self_collision = col.CollisionDetector(self.col_id, bodies, self.joints, self_collision_pairs)
+            self.workspace = col.CollisionDetector(self.col_id, bodies, self.joints, workspace_pairs)
             # Set distance at which objects are considered in collision.
-            self.margin = collision.get("margin", 0.0)
+            self.margin = self.collision.get("margin", 0.0)
             # self._test_collision_tester(joints)
         else:
             self.collision_check = False
@@ -367,8 +337,8 @@ class SafeVelocityControl(Node):
         self.safe_poses = deque(maxlen=10)
         self.consecutive_unsafe = 0
 
-    @register.inputs(goal=Float32MultiArray, position=Float32MultiArray, velocity=Float32MultiArray)
-    @register.outputs(filtered=Float32MultiArray, in_collision=UInt64)
+    @register.inputs(goal=None, position=None, velocity=None)
+    @register.outputs(filtered=None, in_collision=Discrete(3))
     def callback(self, t_n: float, goal: Msg = None, position: Msg = None, velocity: Msg = None):
         goal = np.array(goal.msgs[-1].data, dtype="float32")
         position = np.array(position.msgs[-1].data, dtype="float32")
@@ -380,15 +350,15 @@ class SafeVelocityControl(Node):
                 self.self_collision.in_collision(q=position, margin=self.margin)
                 and self.self_collision.get_distance().min() < 0
             ):
-                in_collision = UInt64(data=1)
+                in_collision = np.array(1, dtype="int64")
             elif self.workspace.in_collision(margin=self.margin) and self.workspace.get_distance().min() < 0:
-                in_collision = UInt64(data=2)
+                in_collision = np.array(2, dtype="int64")
             else:
-                in_collision = UInt64(data=0)
+                in_collision = np.array(0, dtype="int64")
                 self.consecutive_unsafe = 0
                 self.safe_poses.append(position)
         else:
-            in_collision = UInt64(data=0)
+            in_collision = np.array(0, dtype="int64")
 
         # Clip to velocity limits
         filtered = np.clip(goal, -self.vel_limit, self.vel_limit, dtype="float32")
@@ -427,5 +397,5 @@ class SafeVelocityControl(Node):
                     self.consecutive_unsafe = 0
         else:
             self.consecutive_unsafe = 0
-            in_collision = UInt64(data=0)
-        return dict(filtered=Float32MultiArray(data=filtered), in_collision=in_collision)
+            in_collision = np.array(0, dtype="int64")
+        return dict(filtered=filtered, in_collision=in_collision)

@@ -1,12 +1,7 @@
-# EAGERx imports
-from eagerx.core.env import EagerxEnv
-from eagerx.core.graph import Graph
-import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
-import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unused-import
-import eagerx_interbotix  # Registers objects # noqa # pylint: disable=unused-import
+import eagerx
 
 # Other
-import os
+import inspect
 import pytest
 
 NP = eagerx.process.NEW_PROCESS
@@ -19,8 +14,7 @@ ENV = eagerx.process.ENVIRONMENT
     [(3, 20, True, 0, NP), (3, 20, True, 0, ENV)]
 )
 def test_interbotix(eps, num_steps, sync, rtf, p):
-    # Start roscore
-    roscore = eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
+    eagerx.set_log_level(eagerx.WARN)
 
     # Define unique name for test environment
     name = f"{eps}_{num_steps}_{sync}_{p}"
@@ -30,27 +24,29 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     rate = 5
 
     # Initialize empty graph
-    graph = Graph.create()
+    graph = eagerx.Graph.create()
 
     # Create camera
-    cam = eagerx.Object.make(
-        "Camera",
+    from eagerx_interbotix.camera.objects import Camera
+    urdf_path = "/".join(inspect.getfile(Camera).split("/")[:-1]) + "/assets/realsense2_d435.urdf"
+    cam = Camera.make(
         "cam",
         rate=rate,
         sensors=["rgb"],
-        urdf=os.path.dirname(eagerx_interbotix.__file__) + "/camera/assets/realsense2_d435.urdf",
+        urdf=urdf_path,
         optical_link="camera_color_optical_frame",
         calibration_link="camera_bottom_screw_frame",
     )
     graph.add(cam)
 
     # Create solid object
-    cube = eagerx.Object.make("Solid", "cube", urdf="cube_small.urdf", rate=rate, sensors=["pos"])
+    from eagerx_interbotix.solid.objects import Solid
+    cube = Solid.make("cube", urdf="cube_small.urdf", rate=rate, sensors=["pos"])
     graph.add(cube)
 
     # Create arm
-    arm = eagerx.Object.make(
-        "Xseries",
+    from eagerx_interbotix.xseries.objects import Xseries
+    arm = Xseries.make(
         "viper",
         "vx300s",
         sensors=["pos"],
@@ -61,6 +57,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     graph.add(arm)
 
     # Create safety node
+    from eagerx_interbotix.safety.node import SafePositionControl
     c = arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_behind_left_workspace",
@@ -68,13 +65,12 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
         gui=False,
         robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
     )
-    safe = eagerx.Node.make(
-        "SafePositionControl", "safety", 20, c.joint_names, c.joint_upper, c.joint_lower, c.vel_limit, checks=5, collision=collision
-    )
+    safe = SafePositionControl.make("safety", 20, c.joint_names, c.joint_upper, c.joint_lower, c.vel_limit, checks=5, collision=collision)
     graph.add(safe)
 
     # Create reset node
-    reset = eagerx.ResetNode.make("ResetArm", "reset", 5, c.joint_upper, c.joint_lower, gripper=True)
+    from eagerx_interbotix.reset.node import ResetArm
+    reset = ResetArm.make("reset", 5, c.joint_upper, c.joint_lower, gripper=True)
     graph.add(reset)
 
     # Connect the nodes
@@ -90,33 +86,57 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     graph.connect(source=arm.sensors.pos, observation="joints")
 
     # Define engines
-    engine = eagerx.Engine.make("PybulletEngine", rate=20, gui=False, egl=False, sync=True, real_time_factor=0,
-                                process=engine_p)
+    from eagerx_pybullet.engine import PybulletEngine
+    engine = PybulletEngine.make(rate=20, gui=True, egl=False, sync=True, real_time_factor=0, process=engine_p)
 
-    # Define step function
-    def step_fn(prev_obs, obs, action, steps):
-        # Calculate reward
-        rwd = 0
-        # Determine done flag
-        done = steps > num_steps
-        # Set info:
-        info = dict()
-        return obs, rwd, done, info
+    # Make backend
+    # from eagerx.backends.ros1 import Ros1
+    # backend = Ros1.make()
+    from eagerx.backends.single_process import SingleProcess
+    backend = SingleProcess.make()
+
+    # Define environment
+    class TestEnv(eagerx.BaseEnv):
+        def __init__(self, name, rate, graph, engine, backend, force_start):
+            self.steps = 0
+            super().__init__(name, rate, graph, engine, backend=backend, force_start=force_start)
+
+        def step(self, action):
+            obs = self._step(action)
+            # Determine when is the episode over
+            self.steps += 1
+            done = self.steps > 500
+            return obs, 0, done, {}
+
+        def reset(self):
+            # Reset steps counter
+            self.steps = 0
+
+            # Sample states
+            states = self.state_space.sample()
+
+            # Perform reset
+            obs = self._reset(states)
+            return obs
 
     # Initialize Environment
-    env = EagerxEnv(name=name, rate=rate, graph=graph, engine=engine, step_fn=step_fn)
+    env = TestEnv(name=name, rate=rate, graph=graph, engine=engine, backend=backend, force_start=True)
 
-    # Evaluate
-    for e in range(eps):
-        print(f"Episode {e}")
-        _, done = env.reset(), False
-        while not done:
-            action = env.action_space.sample()
-            obs, reward, done, info = env.step(action)
-            rgb = env.render("rgb_array")
+    # Evaluate for 30 seconds in simulation
+    _, action = env.reset(), env.action_space.sample()
+    for i in range(3):
+        obs, reward, done, info = env.step(action)
+        if done:
+            _, action = env.reset(), env.action_space.sample()
+            _rgb = env.render("rgb_array")
+            print(f"Episode {i}")
+    print("\n[Finished]")
 
     # Shutdown
     env.shutdown()
-    if roscore:
-        roscore.shutdown()
     print("\nShutdown")
+
+
+if __name__ == "__main__":
+    test_interbotix(3, 20, True, 0, NP)
+    test_interbotix(3, 20, True, 0, ENV)

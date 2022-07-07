@@ -1,24 +1,18 @@
-from typing import Optional, List
+from typing import List
+from gym.spaces import Box, Discrete
 import numpy as np
-
-# IMPORT ROS
-import rospy
-from std_msgs.msg import Float32MultiArray, UInt64, Int64, Bool
-
-# IMPORT EAGERX
+import eagerx
+from eagerx.core.specs import ResetNodeSpec
 import eagerx.core.register as register
 from eagerx.utils.utils import Msg
-from eagerx.core.entities import ResetNode, SpaceConverter
-from eagerx.core.constants import process as p
 
 status_map = {"Success": 1, "Timeout": 2, "Collision": 3}
 
 
-class ResetArm(ResetNode):
-    @staticmethod
-    @register.spec("ResetArm", ResetNode)
-    def spec(
-        spec,
+class ResetArm(eagerx.ResetNode):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
         upper: List[float],
@@ -26,9 +20,9 @@ class ResetArm(ResetNode):
         gripper: bool = True,
         threshold: float = 0.02,
         timeout: float = 4.0,
-        process: Optional[int] = p.NEW_PROCESS,
-        color: Optional[str] = "grey",
-    ):
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "grey",
+    ) -> ResetNodeSpec:
         """Resets joints & Gripper to goal positions.
 
         :param spec: Not provided by user.
@@ -42,8 +36,10 @@ class ResetArm(ResetNode):
                         indefinite.
         :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
         :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
-        :return:
+        :return: Node specification.
         """
+        spec = cls.get_specification()
+
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
@@ -59,25 +55,26 @@ class ResetArm(ResetNode):
         spec.config.threshold = threshold
         spec.config.timeout = timeout
 
-        # Add converter & space_converter
-        spec.inputs.joints.space_converter = SpaceConverter.make("Space_Float32MultiArray", lower, upper, dtype="float32")
-        spec.outputs.joints.space_converter = SpaceConverter.make("Space_Float32MultiArray", lower, upper, dtype="float32")
-        spec.outputs.gripper.space_converter = SpaceConverter.make("Space_Float32MultiArray", [0], [1], dtype="float32")
+        # Add variable space
+        spec.inputs.joints.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.targets.goal.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.outputs.joints.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        return spec
 
-    def initialize(self, threshold, timeout):
-        self.threshold = threshold
-        self.timeout = timeout
+    def initialize(self, spec: ResetNodeSpec):
+        self.threshold = spec.config.threshold
+        self.timeout = spec.config.timeout
 
         # Create a status publisher (not an output, because asynchronous)
-        self.status_pub = rospy.Publisher(f"{self.ns_name}/outputs/status", Int64, queue_size=0)
+        self.status_pub = self.backend.Publisher(f"{self.ns_name}/outputs/status", "uint64")
 
     @register.states()
     def reset(self):
         self.start = None
 
-    @register.inputs(joints=Float32MultiArray, in_collision=UInt64)
-    @register.targets(goal=Float32MultiArray)
-    @register.outputs(joints=Float32MultiArray, gripper=Float32MultiArray)
+    @register.inputs(joints=None, in_collision=Discrete(3))
+    @register.targets(goal=None)
+    @register.outputs(joints=None, gripper=Box(low=np.array([0], dtype="float32"), high=np.array([1], dtype="float32")))
     def callback(self, t_n: float, goal: Msg = None, joints: Msg = None, in_collision: Msg = None):
         if self.start is None:
             self.start = t_n
@@ -95,18 +92,18 @@ class ResetArm(ResetNode):
         # Determine done flag
         if np.isclose(joints, goal, atol=self.threshold).all():
             is_done = True
-            self.status_pub.publish(Int64(data=status_map["Success"]))
+            self.status_pub.publish(np.array(status_map["Success"], dtype="int64"))
         else:
             if self.timeout > 0 and self.timeout < (t_n - self.start):
                 is_done = True
                 if in_collision:
-                    self.status_pub.publish(Int64(data=status_map["Collision"]))
+                    self.status_pub.publish(np.array(status_map["Collision"], dtype="uint64"))
                 else:
-                    self.status_pub.publish(Int64(data=status_map["Timeout"]))
+                    self.status_pub.publish(np.array(status_map["Timeout"], dtype="uint64"))
             else:
                 is_done = False
 
         # Create output message
-        output_msgs = dict(joints=Float32MultiArray(data=goal), gripper=Float32MultiArray(data=[1.0]))
-        output_msgs["goal/done"] = Bool(data=is_done)
+        output_msgs = dict(joints=goal, gripper=np.array([1.0], dtype="float32"))
+        output_msgs["goal/done"] = is_done
         return output_msgs

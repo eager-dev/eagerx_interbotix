@@ -1,12 +1,9 @@
-from typing import Optional, List
-
-# IMPORT ROS
-from std_msgs.msg import UInt64, Float32MultiArray
-
-# IMPORT EAGERX
-from eagerx.core.constants import process
+from gym.spaces import Box, Discrete
+import numpy as np
+from typing import Optional, List, Any
+import eagerx
+from eagerx.core.specs import NodeSpec, ObjectSpec
 from eagerx.utils.utils import Msg
-from eagerx.core.entities import EngineNode
 import eagerx.core.register as register
 
 # IMPORT INTERBOTIX
@@ -21,23 +18,22 @@ def get_joint_indices(info, joints):
     return joint_indices
 
 
-class XseriesSensor(EngineNode):
-    @staticmethod
-    @register.spec("XseriesSensor", EngineNode)
-    def spec(
-        spec,
+class XseriesSensor(eagerx.EngineNode):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
         joints: List[str],
-        process: Optional[int] = process.NEW_PROCESS,
-        color: Optional[str] = "cyan",
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "cyan",
         mode: str = "position",
-    ):
+    ) -> NodeSpec:
         """XseriesSensor spec"""
+        spec = cls.get_specification()
+
         # Modify default node params
-        spec.config.name = name
-        spec.config.rate = rate
-        spec.config.process = process
+        spec.config.update(name=name, rate=rate, process=process, color=color)
         spec.config.inputs = ["tick"]
         spec.config.outputs = ["obs"]
 
@@ -45,50 +41,53 @@ class XseriesSensor(EngineNode):
         spec.config.mode = mode
         spec.config.joints = joints
 
-    def initialize(self, joints, mode):
-        if not mode == "position":
-            # todo: implement velocity mode
-            raise NotImplementedError(f"This mode is not implemented: {mode}")
-        self.joints = joints
-        self.mode = mode
-        self.dxl = core.InterbotixRobotXSCore(self.config["robot_type"], self.config["name"], False)
-        self.arm = arm.InterbotixArmXSInterface(self.dxl, self.config["robot_type"], "arm", moving_time=0.2, accel_time=0.3)
+        # Set variable spaces
+        rng = np.pi * np.ones(len(joints), dtype="float32")
+        spec.outputs.obs.space = Box(low=-rng, high=rng)
+        return spec
+
+    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+        if not spec.config.mode == "position":
+            raise NotImplementedError(f"This mode is not implemented: {spec.config.mode}")
+        self.joints = spec.config.joints
+        self.mode = spec.config.mode
+        self.dxl = core.InterbotixRobotXSCore(object_spec.config.robot_type, object_spec.config.name, False)
+        self.arm = arm.InterbotixArmXSInterface(self.dxl, object_spec.config.robot_type, "arm", moving_time=0.2, accel_time=0.3)
 
         # Determine joint order
-        self.joint_indices = get_joint_indices(self.dxl.robot_get_robot_info("group", "arm"), joints)
+        self.joint_indices = get_joint_indices(self.dxl.robot_get_robot_info("group", "arm"), spec.config.joints)
 
     @register.states()
     def reset(self):
         pass
 
-    @register.inputs(tick=UInt64)
-    @register.outputs(obs=Float32MultiArray)
+    @register.inputs(tick=Discrete(999))
+    @register.outputs(obs=None)
     def callback(self, t_n: float, tick: Optional[Msg] = None):
         joint_state = self.dxl.robot_get_joint_states()
         obs = [joint_state.position[i] for i in self.joint_indices]
-        return dict(obs=Float32MultiArray(data=obs))
+        return dict(obs=np.array(obs, dtype="float32"))
 
     def close(self):
         pass
 
 
-class XseriesArm(EngineNode):
-    @staticmethod
-    @register.spec("XseriesArm", EngineNode)
-    def spec(
-        spec,
+class XseriesArm(eagerx.EngineNode):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
         joints: List[str],
-        process: Optional[int] = process.NEW_PROCESS,
-        color: Optional[str] = "green",
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "green",
         mode: str = "position_control",
-    ):
+    ) -> NodeSpec:
         """XseriesArm spec"""
+        spec = cls.get_specification()
+
         # Modify default node params
-        spec.config.name = name
-        spec.config.rate = rate
-        spec.config.process = process
+        spec.config.update(name=name, rate=rate, process=process, color=color)
         spec.config.inputs = ["tick", "action"]
         spec.config.outputs = ["action_applied"]
 
@@ -96,17 +95,24 @@ class XseriesArm(EngineNode):
         spec.config.mode = mode
         spec.config.joints = joints
 
-    def initialize(self, joints, mode):
-        if not mode == "position_control":
-            raise NotImplementedError(f"This mode is not implemented: {mode}")
-        self.mode = mode
-        self.dxl = core.InterbotixRobotXSCore(self.config["robot_type"], self.config["name"], False)
+        # Set variable spaces
+        rng = np.pi * np.ones(len(joints), dtype="float32")
+        spec.inputs.action.space = Box(low=-rng, high=rng)
+        spec.outputs.action_applied.space = Box(low=-rng, high=rng)
+
+        return spec
+
+    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+        if not spec.config.mode == "position_control":
+            raise NotImplementedError(f"This mode is not implemented: {spec.config.mode}")
+        self.mode = spec.config.mode
+        self.dxl = core.InterbotixRobotXSCore(object_spec.config.robot_type, object_spec.config.name, False)
         self.arm = arm.InterbotixArmXSInterface(
-            self.dxl, self.config["robot_type"], "arm", moving_time=4 / self.rate, accel_time=1 / self.rate
+            self.dxl, object_spec.config.robot_type, "arm", moving_time=4 / self.rate, accel_time=1 / self.rate
         )
 
         # Determine joint order
-        self.joint_indices = get_joint_indices(self.dxl.robot_get_robot_info("group", "arm"), joints)
+        self.joint_indices = get_joint_indices(self.dxl.robot_get_robot_info("group", "arm"), spec.config.joints)
 
         self.arm.go_to_home_pose(moving_time=2.0, accel_time=0.3)
 
@@ -114,15 +120,15 @@ class XseriesArm(EngineNode):
     def reset(self):
         pass
 
-    @register.inputs(tick=UInt64, action=Float32MultiArray)
-    @register.outputs(action_applied=Float32MultiArray)
+    @register.inputs(tick=Discrete(999), action=None)
+    @register.outputs(action_applied=None)
     def callback(
         self,
         t_n: float,
         tick: Optional[Msg] = None,
         action: Optional[Msg] = None,
     ):
-        positions = action.msgs[-1].data
+        positions = action.msgs[-1]
         indexed_positions = [positions[i] for i in self.joint_indices]
         self.arm.set_joint_positions(indexed_positions, moving_time=4 / self.rate, accel_time=1 / self.rate, blocking=False)
         # Send action that has been applied.
@@ -132,26 +138,26 @@ class XseriesArm(EngineNode):
         self.dxl.robot_torque_enable("group", "arm", True)
 
 
-class XseriesGripper(EngineNode):
-    @staticmethod
-    @register.spec("XseriesGripper", EngineNode)
-    def spec(
-        spec,
+class XseriesGripper(eagerx.EngineNode):
+    @classmethod
+    def make(
+        cls,
         name: str,
         rate: float,
-        process: Optional[int] = process.NEW_PROCESS,
-        color: Optional[str] = "green",
-    ):
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "green",
+    ) -> NodeSpec:
         """XseriesGripper spec"""
+        spec = cls.get_specification()
+
         # Modify default node params
-        spec.config.name = name
-        spec.config.rate = rate
-        spec.config.process = process
+        spec.config.update(name=name, rate=rate, process=process, color=color)
         spec.config.inputs = ["tick", "action"]
         spec.config.outputs = ["action_applied"]
+        return spec
 
-    def initialize(self):
-        self.dxl = core.InterbotixRobotXSCore(self.config["robot_type"], self.config["name"], False)
+    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+        self.dxl = core.InterbotixRobotXSCore(object_spec.config.robot_type, object_spec.config.name, False)
         self.gripper = gripper.InterbotixGripperXSInterface(
             self.dxl,
             "gripper",
@@ -164,8 +170,9 @@ class XseriesGripper(EngineNode):
     def reset(self):
         pass
 
-    @register.inputs(tick=UInt64, action=Float32MultiArray)
-    @register.outputs(action_applied=Float32MultiArray)
+    @register.inputs(tick=Discrete(999),
+                     action=Box(low=np.array([0], dtype="float32"), high=np.array([1], dtype="float32")))
+    @register.outputs(action_applied=Box(low=np.array([0], dtype="float32"), high=np.array([1], dtype="float32")))
     def callback(
         self,
         t_n: float,
@@ -173,7 +180,7 @@ class XseriesGripper(EngineNode):
         action: Optional[Msg] = None,
     ):
         # Maps action=[0, 1.] to [-gripper_value, gripper_value].
-        gripper_value = self.gripper.gripper_value * ((action.msgs[-1].data[0] * 2) - 1)
+        gripper_value = self.gripper.gripper_value * ((action.msgs[-1][0] * 2) - 1)
         # Set gripper value
         self.gripper.gripper_controller(gripper_value, delay=0.0)
         # Send action that has been applied.

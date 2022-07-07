@@ -1,39 +1,39 @@
-from eagerx.core.entities import EngineState
-import eagerx.core.register as register
+import eagerx
+from typing import Any
+from eagerx.core.specs import EngineStateSpec, ObjectSpec
 import pybullet
 
 
-class PbXseriesGripper(EngineState):
-    @staticmethod
-    @register.spec("PbXseriesGripper", EngineState)
-    def spec(spec, joints, constant, scale, fixed=False):
-        spec.config.joints = joints
-        spec.config.constant = constant
-        spec.config.scale = scale
-        spec.config.fixed = fixed
+class PbXseriesGripper(eagerx.EngineState):
+    @classmethod
+    def make(cls, joints, constant, scale, fixed=False) -> EngineStateSpec:
+        spec = cls.get_specification()
+        spec.config.update(joints=joints, constant=constant, scale=scale, fixed=fixed)
+        return spec
 
-    def initialize(self, joints, constant, scale, fixed):
-        self.obj_name = self.config["name"]
-        flag = self.obj_name in self.simulator["robots"]
-        assert flag, f'Simulator object "{self.simulator}" is not compatible with this simulation state.'
-        self.joints = joints
-        self.constant = constant
-        self.scale = scale
-        self.fixed = fixed
-        self.robot = self.simulator["robots"][self.obj_name]
-        self._p = self.simulator["client"]
+    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
+        self.obj_name = object_spec.config.name
+        flag = self.obj_name in simulator["robots"]
+        assert flag, f'Simulator object "{simulator}" is not compatible with this simulation state.'
+        self.joints = spec.config.joints
+        self.constant = spec.config.constant
+        self.scale = spec.config.scale
+        self.fixed = spec.config.fixed
+        self.robot = simulator["robots"][self.obj_name]
+        self._p = simulator["client"]
         self.physics_client_id = self._p._client
 
         self.bodyUniqueId = []
         self.jointIndices = []
-        for _idx, pb_name in enumerate(joints):
+        for _idx, pb_name in enumerate(spec.config.joints):
             bodyid, jointindex = self.robot.jdict[pb_name].get_bodyid_jointindex()
             self.bodyUniqueId.append(bodyid), self.jointIndices.append(jointindex)
-        self.gripper_cb = self._gripper_reset(self._p, self.bodyUniqueId[0], self.jointIndices, constant, scale, fixed)
+        self.gripper_cb = self._gripper_reset(
+            self._p, self.bodyUniqueId[0], self.jointIndices, self.constant, self.scale, self.fixed
+        )
 
-    def reset(self, state, done):
-        if not done:
-            self.gripper_cb(state.data)
+    def reset(self, state: Any):
+        self.gripper_cb(state)
 
     @staticmethod
     def _gripper_reset(p, bodyUniqueId, jointIndices, constant, scale, fixed):

@@ -1,80 +1,37 @@
-# ROS IMPORTS
-from std_msgs.msg import Float32MultiArray
-from sensor_msgs.msg import Image
-
-# EAGERx IMPORTS
+from gym.spaces import Box
+import numpy as np
+import eagerx
 from eagerx_pybullet.engine import PybulletEngine
-from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
 
 
-class Camera(Object):
-    entity_id = "Camera"
-
-    @staticmethod
-    @register.sensors(rgb=Image, pos=Float32MultiArray, orientation=Float32MultiArray)
-    @register.engine_states(pos=Float32MultiArray, orientation=Float32MultiArray)
-    @register.config(
-        urdf=None,
-        fixed_base=True,
-        self_collision=True,
-        base_pos=[0, 0, 0],
-        base_or=[0, 0, 0, 1],
-        render_shape=[480, 640],
-        optical_link=None,
-        calibration_link=None,
+class Camera(eagerx.Object):
+    @classmethod
+    @register.sensors(
+        pos=Box(
+            low=np.array([-999, -999, -999], dtype="float32"),
+            high=np.array([999, 999, 999], dtype="float32"),
+        ),
+        orientation=Box(
+            low=np.array([-1, -1, -1, -1], dtype="float32"),
+            high=np.array([1, 1, 1, 1], dtype="float32"),
+        ),
+        rgb=None,
     )
-    def agnostic(spec: ObjectSpec, rate):
-        """Agnostic definition of the Camera"""
-        # Register standard converters, space_converters, and processors
-        import eagerx.converters  # noqa # pylint: disable=unused-import
-
-        # Position
-        spec.sensors.pos.rate = rate
-        spec.sensors.pos.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[-999, -999, -999],
-            high=[999, 999, 999],
-        )
-        spec.states.pos.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[0.83, 0.0181, 0.75],
-            high=[0.83, 0.0181, 0.75],
-        )
-
-        # Orientation
-        spec.sensors.orientation.rate = rate
-        spec.sensors.orientation.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[-1, -1, -1, -1],
-            high=[1, 1, 1, 1],
-        )
-        spec.states.orientation.space_converter = SpaceConverter.make(
-            "Space_Float32MultiArray",
-            dtype="float32",
-            low=[0.377, -0.04, -0.92, 0.088],
-            high=[0.377, -0.04, -0.92, 0.088],
-        )
-
-        # Rgb
-        spec.sensors.rgb.rate = rate
-        spec.sensors.rgb.space_converter = SpaceConverter.make(
-            "Space_Image",
-            dtype="float32",
-            low=0,
-            high=1,
-            shape=spec.config.render_shape + [3],
-        )
-
-    @staticmethod
-    @register.spec(entity_id, Object)
-    def spec(
-        spec: ObjectSpec,
+    @register.engine_states(
+        pos=Box(
+            low=np.array([0.83, 0.0181, 0.75], dtype="float32"),
+            high=np.array([0.83, 0.0181, 0.75], dtype="float32"),
+        ),
+        orientation=Box(
+            low=np.array([0.377, -0.04, -0.92, 0.088], dtype="float32"),
+            high=np.array([0.377, -0.04, -0.92, 0.088], dtype="float32"),
+        ),
+    )
+    def make(
+        cls,
         name: str,
         sensors=None,
         states=None,
@@ -87,8 +44,10 @@ class Camera(Object):
         urdf: str = None,
         optical_link: str = None,
         calibration_link: str = None,
-    ):
+    ) -> ObjectSpec:
         """Object spec of Camera"""
+        spec = cls.get_specification()
+
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
@@ -105,58 +64,60 @@ class Camera(Object):
         spec.config.optical_link = optical_link if isinstance(optical_link, str) else None
         spec.config.calibration_link = calibration_link if isinstance(calibration_link, str) else None
 
-        # Add agnostic implementation
-        Camera.agnostic(spec, rate)
+        # Set rates
+        spec.sensors.rgb.rate = rate
+        spec.sensors.pos.rate = rate
+        spec.sensors.orientation.rate = rate
+
+        # Set variable space limits
+        spec.sensors.rgb.space = Box(
+            dtype="uint8",
+            low=0,
+            high=255,
+            shape=tuple(spec.config.render_shape + [3]),
+        )
+
+        return spec
 
     @staticmethod
-    @register.engine(entity_id, PybulletEngine)
+    @register.engine(PybulletEngine)
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this engine
-        import eagerx_interbotix.solid.pybullet  # noqa # pylint: disable=unused-import
-        import eagerx_pybullet  # noqa # pylint: disable=unused-import
-
         # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
         import pybullet_data
 
         urdf = spec.config.urdf
-        spec.PybulletEngine.urdf = (
-            urdf if isinstance(urdf, str) else "%s/%s.urdf" % (pybullet_data.getDataPath(), "cube_small")
-        )
+        spec.engine.urdf = urdf if isinstance(urdf, str) else "%s/%s.urdf" % (pybullet_data.getDataPath(), "cube_small")
         # Initial position of baselink when urdf is loaded. Overwritten by state during the reset.
-        spec.PybulletEngine.basePosition = spec.config.base_pos
+        spec.engine.basePosition = spec.config.base_pos
         # Initial orientation of baselink when urdf is loaded. Overwritten by state during the reset.
-        spec.PybulletEngine.baseOrientation = spec.config.base_or
-        spec.PybulletEngine.fixed_base = spec.config.fixed_base
-        spec.PybulletEngine.self_collision = spec.config.self_collision
+        spec.engine.baseOrientation = spec.config.base_or
+        spec.engine.fixed_base = spec.config.fixed_base
+        spec.engine.self_collision = spec.config.self_collision
 
         # Create engine_states (no agnostic states defined in this case)
-        spec.PybulletEngine.states.pos = EngineState.make("LinkState", mode="position", link=spec.config.calibration_link)
-        spec.PybulletEngine.states.orientation = EngineState.make(
-            "LinkState", mode="orientation", link=spec.config.calibration_link
-        )
+        from eagerx_pybullet.enginestates import LinkState
+
+        spec.engine.states.pos = LinkState.make(mode="position", link=spec.config.calibration_link)
+        spec.engine.states.orientation = LinkState.make(mode="orientation", link=spec.config.calibration_link)
 
         # Create sensor engine nodes
-        # Rate=None, but we will connect them to sensors (thus will use the rate set in the agnostic specification)
-        pos = EngineNode.make(
-            "LinkSensor", "pos", rate=spec.sensors.pos.rate, process=2, mode="position", links=[spec.config.optical_link]
-        )
-        orientation = EngineNode.make(
-            "LinkSensor",
+        from eagerx_pybullet.enginenodes import LinkSensor, CameraSensor
+
+        pos = LinkSensor.make("pos", rate=spec.sensors.pos.rate, process=2, mode="position", links=[spec.config.optical_link])
+        orientation = LinkSensor.make(
             "orientation",
             rate=spec.sensors.orientation.rate,
             process=2,
             mode="orientation",
             links=[spec.config.optical_link],
         )
-        rgb = EngineNode.make(
-            "CameraSensor", "rgb", rate=spec.sensors.rgb.rate, process=2, mode="rgb", render_shape=spec.config.render_shape
+        rgb = CameraSensor.make(
+            "rgb", rate=spec.sensors.rgb.rate, process=2, mode="rgb", render_shape=spec.config.render_shape
         )
         rgb.config.inputs.append("pos")
         rgb.config.inputs.append("orientation")
 
-        # Create actuator engine nodes
-        # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         # Connect all engine nodes
         graph.add([pos, orientation, rgb])
         graph.connect(source=pos.outputs.obs, sensor="pos")
@@ -164,6 +125,3 @@ class Camera(Object):
         graph.connect(source=rgb.outputs.image, sensor="rgb")
         graph.connect(source=pos.outputs.obs, target=rgb.inputs.pos)
         graph.connect(source=orientation.outputs.obs, target=rgb.inputs.orientation)
-
-        # Check graph validity (commented out)
-        # graph.is_valid(plot=True)

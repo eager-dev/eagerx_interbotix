@@ -1,15 +1,15 @@
-from eagerx.core.entities import EngineState
-import eagerx.core.register as register
+from typing import Any
+from eagerx.core.specs import EngineStateSpec, ObjectSpec
+import eagerx
 
 
-class DummyState(EngineState):
-    @staticmethod
-    @register.spec("DummyState", EngineState)
-    def spec(spec):
+class DummyState(eagerx.EngineState):
+    @classmethod
+    def make(cls):
+        return cls.get_specification()
+
+    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
         pass
 
-    def initialize(self):
-        pass
-
-    def reset(self, state, done):
+    def reset(self, state: Any):
         pass

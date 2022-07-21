@@ -87,7 +87,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     # Define engines
     from eagerx_pybullet.engine import PybulletEngine
-    engine = PybulletEngine.make(rate=20, gui=True, egl=False, sync=True, real_time_factor=0, process=engine_p)
+    engine = PybulletEngine.make(rate=20, gui=False, egl=False, sync=True, real_time_factor=0, process=engine_p)
 
     # Make backend
     # from eagerx.backends.ros1 import Ros1

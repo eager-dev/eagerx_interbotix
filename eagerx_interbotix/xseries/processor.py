@@ -4,8 +4,6 @@ from eagerx.core.specs import ProcessorSpec
 
 
 class MirrorAction(eagerx.Processor):
-    DTYPE = "float32"
-
     @classmethod
     def make(cls, index=0, constant=0, offset=0, scale=1) -> ProcessorSpec:
         spec = cls.get_specification()

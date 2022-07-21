@@ -1,42 +1,30 @@
-from gym.spaces import Box
-import numpy as np
 import eagerx
+from eagerx import Space
 from eagerx_reality.engine import RealEngine
 from eagerx_pybullet.engine import PybulletEngine
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
+from eagerx_interbotix.utils import generate_urdf, get_configs
 
 # ROS IMPORTS
-from eagerx_interbotix.utils import generate_urdf, get_configs
 from urdf_parser_py.urdf import URDF
 
 
 class Xseries(eagerx.Object):
     @classmethod
     @register.sensors(
-        pos=None,
-        vel=None,
-        ee_pos=Box(
-            low=np.array([-2, -2, 0], dtype="float32"),
-            high=np.array([2, 2, 2], dtype="float32"),
-        ),
+        pos=Space(dtype="float32"), vel=Space(dtype="float32"), ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32")
     )
     @register.actuators(
-        pos_control=None,
-        vel_control=None,
-        gripper_control=Box(
-            low=np.array([0], dtype="float32"),
-            high=np.array([1], dtype="float32"),
-        ),
+        pos_control=Space(dtype="float32"),
+        vel_control=Space(dtype="float32"),
+        gripper_control=Space(low=[0], high=[1], dtype="float32"),
     )
     @register.engine_states(
-        pos=None,
-        vel=None,
-        gripper=Box(
-            low=np.array([0.5], dtype="float32"),
-            high=np.array([0.5], dtype="float32"),
-        ),
+        pos=Space(dtype="float32"),
+        vel=Space(dtype="float32"),
+        gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
     )
     def make(
         cls,
@@ -121,27 +109,19 @@ class Xseries(eagerx.Object):
         spec.actuators.gripper_control.rate = 1
 
         # Set variable spaces
-        spec.sensors.pos.space = Box(low=np.array(joint_lower, dtype="float32"), high=np.array(joint_upper, dtype="float32"))
-        spec.sensors.vel.space = Box(low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32"))
-        spec.actuators.pos_control.space = Box(
-            low=np.array(joint_lower, dtype="float32"), high=np.array(joint_upper, dtype="float32")
-        )
-        spec.actuators.vel_control.space = Box(
-            low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32")
-        )
-        spec.states.pos.space = Box(
-            low=np.zeros(len(joint_lower), dtype="float32"), high=np.zeros(len(joint_lower), dtype="float32")
-        )
-        spec.states.vel.space = Box(
-            low=np.zeros(len(joint_lower), dtype="float32"), high=np.zeros(len(joint_lower), dtype="float32")
-        )
+        spec.sensors.pos.space.update(low=joint_lower, high=joint_upper)
+        spec.sensors.vel.space.update(low=[-v for v in vel_limit], high=vel_limit)
+        spec.actuators.pos_control.space.update(low=joint_lower, high=joint_upper)
+        spec.actuators.vel_control.space.update(low=[-v for v in vel_limit], high=vel_limit)
+        spec.states.pos.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
+        spec.states.vel.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
         return spec
 
     @staticmethod
     @register.engine(PybulletEngine)
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.)
         spec.engine.urdf = spec.config.urdf
         spec.engine.basePosition = spec.config.base_pos
         spec.engine.baseOrientation = spec.config.base_or
@@ -239,12 +219,14 @@ class Xseries(eagerx.Object):
 
         # Determine gripper min/max
         from eagerx_interbotix.xseries.real.enginestates import DummyState
+
         spec.engine.states.gripper = DummyState.make()
         spec.engine.states.pos = DummyState.make()
         spec.engine.states.vel = DummyState.make()
 
         # Create sensor engine nodes
         from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
+
         joints = spec.config.joint_names
         pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.pos.rate, joints=joints, process=2, mode="position")
         vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.vel.rate, joints=joints, process=2, mode="velocity")

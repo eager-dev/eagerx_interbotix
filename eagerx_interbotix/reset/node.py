@@ -1,7 +1,7 @@
 from typing import List
-from gym.spaces import Box, Discrete
 import numpy as np
 import eagerx
+from eagerx import Space
 from eagerx.core.specs import ResetNodeSpec
 import eagerx.core.register as register
 from eagerx.utils.utils import Msg
@@ -25,7 +25,6 @@ class ResetArm(eagerx.ResetNode):
     ) -> ResetNodeSpec:
         """Resets joints & Gripper to goal positions.
 
-        :param spec: Not provided by user.
         :param name: Node name
         :param rate: Rate at which callback is called.
         :param upper: Upper joint limits
@@ -56,9 +55,9 @@ class ResetArm(eagerx.ResetNode):
         spec.config.timeout = timeout
 
         # Add variable space
-        spec.inputs.joints.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
-        spec.targets.goal.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
-        spec.outputs.joints.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.inputs.joints.space.update(low=lower, high=upper)
+        spec.targets.goal.space.update(low=lower, high=upper)
+        spec.outputs.joints.space.update(low=lower, high=upper)
         return spec
 
     def initialize(self, spec: ResetNodeSpec):
@@ -72,9 +71,9 @@ class ResetArm(eagerx.ResetNode):
     def reset(self):
         self.start = None
 
-    @register.inputs(joints=None, in_collision=Discrete(3))
-    @register.targets(goal=None)
-    @register.outputs(joints=None, gripper=Box(low=np.array([0], dtype="float32"), high=np.array([1], dtype="float32")))
+    @register.inputs(joints=Space(dtype="float32"), in_collision=Space(low=0, high=2, shape=(), dtype="int64"))
+    @register.targets(goal=Space(dtype="float32"))
+    @register.outputs(joints=Space(dtype="float32"), gripper=Space(low=[0.0], high=[1.0]))
     def callback(self, t_n: float, goal: Msg = None, joints: Msg = None, in_collision: Msg = None):
         if self.start is None:
             self.start = t_n
@@ -86,8 +85,8 @@ class ResetArm(eagerx.ResetNode):
             in_collision = False
 
         # Process goal & current joint msgs
-        joints = np.array(joints.msgs[-1].data, dtype="float32")
-        goal = np.array(goal.msgs[-1].data, dtype="float32")
+        joints = joints.msgs[-1]
+        goal = goal.msgs[-1]
 
         # Determine done flag
         if np.isclose(joints, goal, atol=self.threshold).all():

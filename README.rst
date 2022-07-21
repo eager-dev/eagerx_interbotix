@@ -20,7 +20,7 @@ eagerx_interbotix package
 What is the *eagerx_interbotix* package?
 ========================================
 This repository interfaces interbotix robots with EAGERx.
-EAGERx (Engine Agnostic Gym Environments for Robotics) enables users to easily define new tasks, switch from one sensor to another, and switch from simulation to reality with a single line of code by being invariant to the physics engine.
+EAGERx (Engine Agnostic Graph Environments for Robotics) enables users to easily define new tasks, switch from one sensor to another, and switch from simulation to reality with a single line of code by being invariant to the physics engine.
 `The core repository is available here <https://github.com/eager-dev/eagerx>`_.
 `Full documentation and tutorials (including package creation and contributing) are available here <https://eagerx.readthedocs.io/en/master/>`_.
 
@@ -33,14 +33,10 @@ You can install the package using pip:
 
     pip3 install eagerx-interbotix
 
-.. note::
-    EAGERx depends on a minimal ROS installation. Fortunately, you **can** use eagerx anywhere as you would any python package,
-    so it does **not** impose a ROS package structure on your project.
-
 Dependencies (reality only)
 ===========================
 
-We require the interbotix ros package to control the interbotix manipulators in the real world.
+We require ROS and the interbotix ros package to control the interbotix manipulators in the real world.
 
 If you do not have rosdep already installed (check if your shell recognizes the command ``rosdep -help``), run the code below.
 If you use the melodic distribution, use ``python-rosdep`` instead.
@@ -89,7 +85,7 @@ If you are using EAGERx for your scientific publications, please cite:
 
     @article{eagerx,
         author  = {van der Heijden, Bas and Luijkx, Jelle, and Ferranti, Laura and Kober, Jens and Babuska, Robert},
-        title = {EAGERx: Engine Agnostic Gym Environment for Robotics},
+        title = {EAGERx: Engine Agnostic Graph Environments for Robotics},
         year = {2022},
         publisher = {GitHub},
         journal = {GitHub repository},

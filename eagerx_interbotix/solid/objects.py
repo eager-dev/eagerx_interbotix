@@ -1,7 +1,5 @@
-from gym.spaces import Box
-import numpy as np
 from eagerx_pybullet.engine import PybulletEngine
-from eagerx import Object
+from eagerx import Object, Space
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
@@ -10,41 +8,17 @@ import eagerx.core.register as register
 class Solid(Object):
     @classmethod
     @register.sensors(
-        pos=Box(
-            low=np.array([-999, -999, -999], dtype="float32"),
-            high=np.array([999, 999, 999], dtype="float32"),
-        ),
-        vel=Box(
-            low=np.array([-10, -10, -10], dtype="float32"),
-            high=np.array([10, 10, 10], dtype="float32"),
-        ),
-        orientation=Box(
-            low=np.array([-1, -1, -1, -1], dtype="float32"),
-            high=np.array([1, 1, 1, 1], dtype="float32"),
-        ),
-        angular_vel=Box(
-            low=np.array([-10, -10, -10], dtype="float32"),
-            high=np.array([10, 10, 10], dtype="float32"),
-        ),
+        pos=Space(shape=(3,), dtype="float32"),
+        vel=Space(shape=(3,), dtype="float32"),
+        orientation=Space(low=[-1, -1, -1, -1], high=[1, 1, 1, 1], shape=(4,), dtype="float32"),
+        angular_vel=Space(shape=(3,), dtype="float32"),
     )
     @register.engine_states(
-        pos=Box(
-            low=np.array([-1, -1, 0], dtype="float32"),
-            high=np.array([1, 1, 0], dtype="float32"),
-        ),
-        vel=Box(
-            low=np.array([0, 0, 0], dtype="float32"),
-            high=np.array([0, 0, 0], dtype="float32"),
-        ),
-        orientation=Box(
-            low=np.array([0, 0, -1, -1], dtype="float32"),
-            high=np.array([0, 0, 1, 1], dtype="float32"),
-        ),
-        angular_vel=Box(
-            low=np.array([0, 0, 0], dtype="float32"),
-            high=np.array([0, 0, 0], dtype="float32"),
-        ),
-        lateral_friction=Box(low=0.1, high=0.5, shape=(), dtype="float32"),
+        pos=Space(low=[-1, -1, 0], high=[1, 1, 0], dtype="float32"),
+        vel=Space(low=[0, 0, 0], high=[0, 0, 0], dtype="float32"),
+        orientation=Space(low=[0, 0, -1, -1], high=[0, 0, 1, 1], dtype="float32"),
+        angular_vel=Space(low=[0, 0, 0], high=[0, 0, 0], dtype="float32"),
+        lateral_friction=Space(low=0.1, high=0.5, shape=(), dtype="float32"),
     )
     def make(
         cls,

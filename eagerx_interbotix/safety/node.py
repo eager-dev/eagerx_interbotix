@@ -1,9 +1,9 @@
 from typing import Optional, List, Dict
 from collections import deque
-from gym.spaces import Box, Discrete
 import numpy as np
 
 import eagerx
+from eagerx import Space
 from eagerx.core.specs import NodeSpec
 import eagerx.core.register as register
 from eagerx.utils.utils import Msg, load
@@ -68,9 +68,9 @@ class SafePositionControl(eagerx.Node):
         spec.config.collision = collision if isinstance(collision, dict) else None
 
         # Add converter & space
-        spec.inputs.goal.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
-        spec.inputs.current.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
-        spec.outputs.filtered.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.inputs.goal.space.update(low=lower, high=upper)
+        spec.inputs.current.space.update(low=lower, high=upper)
+        spec.outputs.filtered.space.update(low=lower, high=upper)
         return spec
 
     def initialize(self, spec: NodeSpec):
@@ -146,11 +146,11 @@ class SafePositionControl(eagerx.Node):
         self.safe_poses = deque(maxlen=10)
         self.consecutive_unsafe = 0
 
-    @register.inputs(goal=None, current=None)
-    @register.outputs(filtered=None, in_collision=Discrete(3))
+    @register.inputs(goal=Space(dtype="float32"), current=Space(dtype="float32"))
+    @register.outputs(filtered=Space(dtype="float32"), in_collision=Space(low=0, high=2, shape=(), dtype="int64"))
     def callback(self, t_n: float, goal: Msg = None, current: Msg = None):
-        goal = np.array(goal.msgs[-1].data, dtype="float32")
-        current = np.array(current.msgs[-1].data, dtype="float32")
+        goal = goal.msgs[-1]
+        current = current.msgs[-1]
 
         # Setpoint last safe position
         if self.collision_check:
@@ -259,9 +259,9 @@ class SafeVelocityControl(eagerx.Node):
         spec.config.collision = collision if isinstance(collision, dict) else None
 
         # Set variable spaces
-        spec.inputs.goal.space = Box(low=-np.array(vel_limit, dtype="float32"), high=np.array(vel_limit, dtype="float32"))
-        spec.inputs.position.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
-        spec.outputs.filtered.space = Box(low=np.array(lower, dtype="float32"), high=np.array(upper, dtype="float32"))
+        spec.inputs.goal.space.update(low=[-v for v in vel_limit], high=vel_limit)
+        spec.inputs.position.space.update(low=lower, high=upper)
+        spec.outputs.filtered.space.update(low=lower, high=upper)
         return spec
 
     def initialize(self, spec: NodeSpec):
@@ -337,12 +337,12 @@ class SafeVelocityControl(eagerx.Node):
         self.safe_poses = deque(maxlen=10)
         self.consecutive_unsafe = 0
 
-    @register.inputs(goal=None, position=None, velocity=None)
-    @register.outputs(filtered=None, in_collision=Discrete(3))
+    @register.inputs(goal=Space(dtype="float32"), position=Space(dtype="float32"), velocity=Space(dtype="float32"))
+    @register.outputs(filtered=Space(dtype="float32"), in_collision=Space(low=0, high=2, shape=(), dtype="int64"))
     def callback(self, t_n: float, goal: Msg = None, position: Msg = None, velocity: Msg = None):
-        goal = np.array(goal.msgs[-1].data, dtype="float32")
-        position = np.array(position.msgs[-1].data, dtype="float32")
-        velocity = np.array(velocity.msgs[-1].data, dtype="float32")
+        goal = goal.msgs[-1]
+        position = position.msgs[-1]
+        velocity = velocity.msgs[-1]
 
         # Setpoint last safe position
         if self.collision_check:

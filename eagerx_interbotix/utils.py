@@ -74,6 +74,3 @@ def generate_urdf(
     rosparam.upload_params(urdf_key, urdf_sbtd)
 
     return urdf_key
-
-    # Write to tmp file
-    #

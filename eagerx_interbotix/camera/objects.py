@@ -1,7 +1,7 @@
-from gym.spaces import Box
-import numpy as np
 import eagerx
+from eagerx import Space
 from eagerx_pybullet.engine import PybulletEngine
+from eagerx_reality.engine import RealEngine
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
@@ -10,25 +10,13 @@ import eagerx.core.register as register
 class Camera(eagerx.Object):
     @classmethod
     @register.sensors(
-        pos=Box(
-            low=np.array([-999, -999, -999], dtype="float32"),
-            high=np.array([999, 999, 999], dtype="float32"),
-        ),
-        orientation=Box(
-            low=np.array([-1, -1, -1, -1], dtype="float32"),
-            high=np.array([1, 1, 1, 1], dtype="float32"),
-        ),
-        rgb=None,
+        pos=Space(shape=(3,), dtype="float32"),
+        orientation=Space(low=[-1, -1, -1, -1], high=[1, 1, 1, 1], shape=(4,), dtype="float32"),
+        rgb=Space(dtype="uint8"),
     )
     @register.engine_states(
-        pos=Box(
-            low=np.array([0.83, 0.0181, 0.75], dtype="float32"),
-            high=np.array([0.83, 0.0181, 0.75], dtype="float32"),
-        ),
-        orientation=Box(
-            low=np.array([0.377, -0.04, -0.92, 0.088], dtype="float32"),
-            high=np.array([0.377, -0.04, -0.92, 0.088], dtype="float32"),
-        ),
+        pos=Space(low=[0.83, 0.0181, 0.75], high=[0.83, 0.0181, 0.75], shape=(3,), dtype="float32"),
+        orientation=Space(low=[0.377, -0.04, -0.92, 0.088], high=[0.377, -0.04, -0.92, 0.088], shape=(4,), dtype="float32"),
     )
     def make(
         cls,
@@ -44,8 +32,27 @@ class Camera(eagerx.Object):
         urdf: str = None,
         optical_link: str = None,
         calibration_link: str = None,
+        camera_index: int = 0,
     ) -> ObjectSpec:
-        """Object spec of Camera"""
+        """Make a spec to initialize a camera.
+
+        :param name: Name of the object (topics are placed within this namespace).
+        :param sensors: A list of selected sensors. Must be a subset of the registered sensors.
+        :param states: A list of selected states. Must be a subset of the registered actuators.
+        :param rate: The default rate at which all sensors run. Can be modified via the spec API.
+        :param base_pos: Base position of the object [x, y, z].
+        :param base_or: Base orientation of the object in quaternion [x, y, z, w].
+        :param self_collision: Enable self collisions.
+        :param fixed_base: Force the base of the loaded object to be static.
+        :param render_shape: The shape of the produced images [height, width].
+        :param urdf: A fullpath (ending with .urdf), a key that points to the urdf (xml)string on the
+                     rosparam server, or a urdf within pybullet's search path. The `pybullet_data` package is
+                     included in the search path.
+        :param optical_link: Link related to the pose from which to render images.
+        :param calibration_link: Link related to the pose that is reset.
+        :param camera_index: Camera index corresponding to the camera device number per OpenCV.
+        :return: ObjectSpec
+        """
         spec = cls.get_specification()
 
         # Modify default agnostic params
@@ -60,9 +67,10 @@ class Camera(eagerx.Object):
         spec.config.base_or = base_or if isinstance(base_or, list) else [0, 0, 0, 1]
         spec.config.self_collision = self_collision
         spec.config.fixed_base = fixed_base
-        spec.config.render_shape = render_shape if isinstance(render_shape, list) else [200, 300]
+        spec.config.render_shape = render_shape if isinstance(render_shape, list) else [480, 480]
         spec.config.optical_link = optical_link if isinstance(optical_link, str) else None
         spec.config.calibration_link = calibration_link if isinstance(calibration_link, str) else None
+        spec.config.camera_index = camera_index
 
         # Set rates
         spec.sensors.rgb.rate = rate
@@ -70,13 +78,7 @@ class Camera(eagerx.Object):
         spec.sensors.orientation.rate = rate
 
         # Set variable space limits
-        spec.sensors.rgb.space = Box(
-            dtype="uint8",
-            low=0,
-            high=255,
-            shape=tuple(spec.config.render_shape + [3]),
-        )
-
+        spec.sensors.rgb.space.update(low=0, high=255, shape=list(spec.config.render_shape + [3]))
         return spec
 
     @staticmethod
@@ -125,3 +127,26 @@ class Camera(eagerx.Object):
         graph.connect(source=rgb.outputs.image, sensor="rgb")
         graph.connect(source=pos.outputs.obs, target=rgb.inputs.pos)
         graph.connect(source=orientation.outputs.obs, target=rgb.inputs.orientation)
+
+    @staticmethod
+    @register.engine(RealEngine)
+    def real_engine(spec: ObjectSpec, graph: EngineGraph):
+        """Engine-specific implementation (Pybullet) of the object."""
+        # Couple engine states
+        from eagerx_interbotix.camera.enginestates import DummyState
+
+        spec.engine.states.pos = DummyState.make()
+        spec.engine.states.orientation = DummyState.make()
+
+        # Create sensor engine nodes
+        from eagerx_reality.enginenodes import CameraRender
+
+        rgb = CameraRender.make(
+            "image",
+            shape=spec.config.render_shape,
+            rate=spec.sensors.rgb.rate,
+            process=eagerx.process.NEW_PROCESS,
+            camera_idx=spec.config.camera_index,
+        )
+        graph.add([rgb])
+        graph.connect(source=rgb.outputs.image, sensor="rgb")

@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.7 (2022-07-21)
+### Fix
+* Refactor space and demo_real branch changes ([`436d054`](https://github.com/eager-dev/eagerx_interbotix/commit/436d05415844678b6e916c2649e90404919a135c))
+* Refactor numpy messages, spec api, backend [tests working] ([`3179c06`](https://github.com/eager-dev/eagerx_interbotix/commit/3179c06eb5bb735f158c2feaf734e719a4525f51))
+
 ## v0.1.6 (2022-05-16)
 ### Fix
 * Update dependencies ([`aef23ae`](https://github.com/eager-dev/eagerx_interbotix/commit/aef23ae0a89427ca3fe77b12db91dca494f0d881))

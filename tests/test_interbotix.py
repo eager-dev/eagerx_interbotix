@@ -40,12 +40,12 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     graph.add(cam)
 
     # Create solid object
-    from eagerx_interbotix.solid.objects import Solid
+    from eagerx_interbotix.solid.solid import Solid
     cube = Solid.make("cube", urdf="cube_small.urdf", rate=rate, sensors=["pos"])
     graph.add(cube)
 
     # Create arm
-    from eagerx_interbotix.xseries.objects import Xseries
+    from eagerx_interbotix.xseries.xseries import Xseries
     arm = Xseries.make(
         "viper",
         "vx300s",

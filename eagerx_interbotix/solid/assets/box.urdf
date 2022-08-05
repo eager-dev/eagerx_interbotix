@@ -11,16 +11,16 @@
 
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-       <mass value="0.358"/>
+       <mass value="0.047"/>
 		<!-- solid box : Izz=m*(x*x+y*y)/12; Ixx=m*(y*y+z*z)/12 Iyy=m*(x*x+z*z)/12 -->
-       <inertia ixx="0.000292" ixy = "0" ixz = "0"
-                iyy="0.000292" iyz = "0"
-                izz="0.000292" />
+       <inertia ixx="0.0000783" ixy = "0" ixz = "0"
+                iyy="0.0000783" iyz = "0"
+                izz="0.0000783" />
     </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-		  <box size="0.07 0.07 0.07"/>
+		  <box size="0.1 0.1 0.1"/>
       </geometry>
        <material name="red">
         <color rgba="1 0.388 0.278 1"/>
@@ -29,7 +29,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-	 	<box size="0.07 0.07 0.07"/>
+	 	<box size="0.1 0.1 0.1"/>
       </geometry>
     </collision>
   </link>

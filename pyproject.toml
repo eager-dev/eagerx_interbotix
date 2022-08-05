@@ -11,14 +11,15 @@ include = ["assets"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-#eagerx-gui = "^0.2.5"
+#eagerx-gui = "^0.2.9"
 eagerx-pybullet = "^0.1.9"
-eagerx-reality = "^0.1.10"
+eagerx-reality = "^0.1.11"
 scipy = "^1.0"
 modern_robotics = "^1.1.0"
 urdf-parser-py = "^0.0.4"
 xacro = "^1.13.3"
 stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
+opencv-contrib-python = "^4.6.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"

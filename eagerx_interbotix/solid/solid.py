@@ -27,6 +27,7 @@ class Solid(Object):
         name: str,
         urdf: str,
         rate: int,
+        cam_intrinsics: t.Dict,
         sensors: t.List[str] = None,
         states: t.List[str] = None,
         base_pos: t.List[float] = None,
@@ -36,7 +37,6 @@ class Solid(Object):
         cam_translation: t.List[float] = None,
         cam_rotation: t.List[float] = None,
         cam_index: int = 1,
-        resolution: t.List[int] = None,
     ) -> ObjectSpec:
         """Object spec of Solid"""
         spec = cls.get_specification()
@@ -55,18 +55,13 @@ class Solid(Object):
         spec.config.cam_index = cam_index
         spec.config.cam_translation = cam_translation if cam_translation is not None else [1.0, 0.0, 0.2]
         spec.config.cam_rotation = cam_rotation if cam_rotation is not None else [0, 0, 1, 0]
-        spec.config.resolution = resolution if resolution is not None else [480, 480]
+        spec.config.cam_intrinsics = cam_intrinsics
 
         # Set rates
         spec.sensors.orientation.rate = rate
         spec.sensors.yaw.rate = rate
         spec.sensors.position.rate = rate
         spec.sensors.robot_view.rate = rate
-
-        # Set robot view space
-        if resolution is not None:
-            shape = (resolution[0], resolution[1], 3)
-            spec.sensors.robot_view.space = Space(low=0, high=255, shape=shape, dtype="uint8")
 
         return spec
 
@@ -97,13 +92,15 @@ class Solid(Object):
         orientation = LinkSensor.make("orientation", rate=spec.sensors.orientation.rate, mode="orientation")
 
         # Initialize robot view
+        height, width = spec.config.cam_intrinsics["image_height"], spec.config.cam_intrinsics["image_width"]
         robot_view = CameraSensor.make("robot_view",
                                        rate=spec.sensors.robot_view.rate,
                                        mode="bgr",
-                                       render_shape=spec.config.resolution,
+                                       render_shape=[height, width],
                                        fov=57.0,  # todo: set camera intrinsics for simulation
                                        near_val=0.1,  # todo: set camera intrinsics for simulation
-                                       far_val=100.0  # todo: set camera intrinsics for simulation
+                                       far_val=100.0,  # todo: set camera intrinsics for simulation
+                                       debug=True
                                        )
         translation = spec.config.cam_translation
         rotation = spec.config.cam_rotation
@@ -120,7 +117,7 @@ class Solid(Object):
         graph.connect(source=pos.outputs.obs, sensor="position")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=orientation.outputs.obs, target=yaw.inputs.orientation)
-        graph.connect(source=yaw.outputs.obs, sensor="yaw")
+        graph.connect(source=yaw.outputs.yaw, sensor="yaw")
         graph.connect(source=robot_view.outputs.image, sensor="robot_view")
 
     @staticmethod
@@ -142,17 +139,22 @@ class Solid(Object):
         assert len(set(rates)) == 1, "All sensor rates should be equal."
 
         # Create engine nodes
-        from eagerx_interbotix.solid.real.enginenodes import ArucoPoseDetector
+        from eagerx_interbotix.solid.real.enginenodes import PoseDetector
         from eagerx_reality.enginenodes import CameraRender
 
-        cam = CameraRender.make('cam', spec.sensors.robot_view.rate, camera_idx=spec.config.cam_index, always_render=True)
-        aruco = ArucoPoseDetector.make("aruco",
-                                       spec.sensors.position.rate,
-                                       aruco_id=25,
-                                       aruco_size=800,
-                                       cam_translation=spec.config.cam_translation,
-                                       cam_rotation=spec.config.cam_rotation,
-                                       )
+        height, width = spec.config.cam_intrinsics["image_height"], spec.config.cam_intrinsics["image_width"]
+        cam = CameraRender.make('cam', spec.sensors.robot_view.rate, camera_idx=spec.config.cam_index, always_render=True, shape=[height, width])
+        aruco = PoseDetector.make("aruco",
+                                  spec.sensors.position.rate,
+                                  aruco_id=25,
+                                  aruco_size=0.08,
+                                  aruco_type="DICT_ARUCO_ORIGINAL",
+                                  object_translation=[0, 0, -0.05],
+                                  cam_translation=spec.config.cam_translation,
+                                  cam_rotation=spec.config.cam_rotation,
+                                  cam_intrinsics=spec.config.cam_intrinsics,
+                                  )
+        aruco.states.position.space = spec.states.position.space
 
         # Create wrapped yaw sensor
         from eagerx_interbotix.solid.yaw_node import WrappedYawSensor
@@ -163,7 +165,7 @@ class Solid(Object):
         graph.add([cam, aruco, yaw])
         graph.connect(cam.outputs.image, aruco.inputs.image)
         graph.connect(aruco.outputs.position, sensor="position")
-        graph.connect(aruco.outputs.orientation, sensor="orientation")
+        graph.connect(yaw.outputs.orientation, sensor="orientation")
         graph.connect(aruco.outputs.orientation, target=yaw.inputs.orientation)
-        graph.connect(yaw.outputs.obs, sensor="yaw")
+        graph.connect(yaw.outputs.yaw, sensor="yaw")
         graph.connect(aruco.outputs.image_aruco, sensor="robot_view")

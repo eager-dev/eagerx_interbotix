@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 from typing import Dict, List, Any, Union
 import eagerx
 from eagerx import Space
@@ -96,8 +97,7 @@ class XseriesSensor(eagerx.EngineNode):
             obs = np.array(ee_position, dtype="float32")
         elif self.mode == "ee_orientation":
             rot_matrix, _, _ = self.arm.get_ee_pose()
-            raise NotImplementedError("how to convert rotation_matrix into quaternion vector?")
-            # obs = np.array(joint_state.effort, dtype="float32")
+            obs = R.from_matrix(rot_matrix).as_quat().astype("float32")
         elif self.mode == "ee_pose":
             rot_matrix, position, _ = self.arm.get_ee_pose()
             raise NotImplementedError("how to convert rotation_matrix into quaternion vector?")

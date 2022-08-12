@@ -117,10 +117,16 @@ class Camera(eagerx.Object):
             links=[spec.config.optical_link],
         )
         image = CameraSensor.make(
-            "image", rate=spec.sensors.image.rate, process=2, mode="bgr", render_shape=spec.config.render_shape
+            "image",
+            rate=spec.sensors.image.rate,
+            inputs=["pos", "orientation"],
+            process=2,
+            mode="bgr",
+            render_shape=spec.config.render_shape,
+            debug=True
         )
-        image.config.inputs.append("pos")
-        image.config.inputs.append("orientation")
+        # image.config.inputs.append("pos")
+        # image.config.inputs.append("orientation")
 
         # Connect all engine nodes
         graph.add([pos, orientation, image])

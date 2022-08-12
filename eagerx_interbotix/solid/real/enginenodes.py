@@ -1,10 +1,12 @@
 import numpy as np
-from typing import Dict, List, Any, Union
+from scipy.spatial.transform import Rotation as R
+from typing import Dict, List, Any
 import eagerx
 from eagerx import Space
 from eagerx.core.specs import NodeSpec, ObjectSpec
 from eagerx.utils.utils import Msg
 import eagerx.core.register as register
+from eagerx_interbotix.aruco_detector import ArucoPoseDetector
 
 
 class GoalObservationSensor(eagerx.EngineNode):
@@ -55,18 +57,19 @@ class GoalObservationSensor(eagerx.EngineNode):
         pass
 
 
-class ArucoPoseDetector(eagerx.EngineNode):
+class PoseDetector(eagerx.EngineNode):
     @classmethod
     def make(
         cls,
         name: str,
         rate: float,
         aruco_id: int,
-        aruco_size: int,
+        aruco_size: float,
         aruco_type: str,
-        aruco_offset: List[float],
+        object_translation: List[float],
         cam_translation: List[float],
         cam_rotation: List[float],
+        cam_intrinsics: Dict,
         color: str = "cyan",
         process: int = eagerx.NEW_PROCESS,
     ) -> NodeSpec:
@@ -75,11 +78,13 @@ class ArucoPoseDetector(eagerx.EngineNode):
         :param name: Node name.
         :param rate: Rate of the node [Hz].
         :param aruco_id: Unique identifier of the Aruco marker.
-        :param aruco_size: Aruco marker size [mm].
+        :param aruco_size: Aruco marker size [m].
         :param aruco_type: type of aruco dict (e.g. `DICT_ARUCO_ORIGINAL`, `DICT_5X5_100`).
-        :param aruco_offset: Offset from Aruco marker pose to object cog in Aruco frame [m].
+        :param object_translation: Translation from Aruco marker pose to object cog in Aruco frame [m].
         :param cam_translation: Translation to camera in base frame (origin base to camera) [m].
         :param cam_rotation: Rotation to camera in base frame (origin base to camera) [quaternion].
+        :param cam_intrinsics: A dict with the intrinsic parameters of the camera.
+                               Has the format: wiki.ros.org/camera_calibration.
         :param color: Color of logged messages.
         :param process: Process to launch node in.
         :return: Parameter specification.
@@ -90,39 +95,91 @@ class ArucoPoseDetector(eagerx.EngineNode):
         spec.config.update(name=name, rate=rate, process=process, color=color)
         spec.config.inputs = ["image"]
         spec.config.outputs = ["position", "orientation", "image_aruco"]
+        spec.config.states = ["position"]
         spec.config.aruco_id = aruco_id
         spec.config.aruco_size = aruco_size
         spec.config.aruco_type = aruco_type
-        spec.config.aruco_offset = aruco_offset
+        spec.config.object_translation = object_translation
+        spec.config.cam_translation = cam_translation
+        spec.config.cam_rotation = cam_rotation
+        spec.config.cam_intrinsics = cam_intrinsics
         return spec
 
     def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
-        # todo: initialize detector
         self.aruco_id = spec.config.aruco_id
-        self.aruco_size = spec.config.aruco_size
-        self.aruco_type = spec.config.aruco_type
-        self.aruco_offset = spec.config.aruco_size
-        # todo: calculate cam_to_base transformation matrix here
-        self.cam_translation = spec.config.aruco_size
-        self.cam_rotation = spec.config.aruco_size
+        ci = spec.config.cam_intrinsics
 
-    @register.states()
-    def reset(self):
-        pass
+        # Initialize detector
+        aruco_size = spec.config.aruco_size
+        aruco_type = spec.config.aruco_type
+        height, width = ci["image_height"], ci["image_width"]
+        camera_matrix = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"])
+        dist_coeffs = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"])
+        self.detector = ArucoPoseDetector(height, width, aruco_size, camera_matrix, dist_coeffs, aruco_type)
+
+        # Calculate cam_to_base transformation matrix
+        cam_trans = spec.config.cam_translation
+        cam_quat = spec.config.cam_rotation
+        self.T_c2b = np.zeros((4, 4), dtype="float32")
+        self.T_c2b[3, 3] = 1
+        self.T_c2b[:3, :3] = R.from_quat(cam_quat).as_matrix()
+        self.T_c2b[:3, 3] = cam_trans
+
+        # Object translation offset
+        t = spec.config.object_translation
+        self.object_translation = np.array([[t[0]], [t[1]], [t[2]], [1.0]], dtype="float32")
+
+    @register.states(position=Space(shape=(3,), dtype="float32"))
+    def reset(self, position: np.ndarray):
+        self.pos_last = position
 
     @register.inputs(image=Space(dtype="uint8"))
-    @register.outputs(position=Space(shape=(3,), dtype="float32"),
-                      orientation=Space(shape=(4,), dtype="float32"),
+    @register.outputs(position=Space(dtype="float32"),
+                      orientation=Space(dtype="float32"),
                       image_aruco=Space(dtype="uint8"))
     def callback(self, t_n: float, image: Msg):
-        # todo: Get aruco pose by passing image through aruco pose detector
-        # todo: Transform pose with cam_to_base transformation.
-        # todo: Plot aruco pose on image
-        # todo: what if nothing detected? Output last pose.
-        img = image.msgs[-1]
-        position = np.array([0.4, -0.2, 0.05], dtype="float32")
-        orientation = np.array([0, 0, 0, 1], dtype="float32")
-        return dict(position=position, orientation=orientation, image_aruco=image.msgs[-1])
+        image_raw = image.msgs[-1]
+
+        # Undistort image
+        image = self.detector.undistort(image_raw)
+
+        # Get pose
+        image, corners, ids, rvec, tvec = self.detector.estimate_pose(image, draw=True)
+
+        # Get pose measurements (filter for aurco_id)
+        if rvec is not None and (ids == self.aruco_id)[:, 0].any():
+            mask = (ids == self.aruco_id)[:, 0]
+            rvec = rvec[mask]
+            tvec = tvec[mask]
+            # Position aruco (with offset) in camera frame (aic).
+            pos_aic = self._apply_object_translation(rvec, tvec)
+            # Position aruco (with offset) in base frame (aib).
+            pos_aib = self.T_c2b[:3, :3] @ pos_aic + self.T_c2b[:3, 3, None]
+            # Rotation matrix from aruco to base frame
+            rmat_a2c = R.from_rotvec(rvec[:, 0, :]).as_matrix()
+            rmat_a2b = self.T_c2b[:3, :3] @ rmat_a2c
+            quat_a2b = R.from_matrix(rmat_a2b).as_quat().astype("float32")
+            # Store last position
+            orientation = quat_a2b
+            self.pos_last = np.mean(pos_aib, axis=0)[:, 0]
+            # self.backend.logwarn(f"[PoseDetector] x={pos_aib[:, 0, 0]} | y={pos_aib[:, 1, 0]}, z={pos_aib[:, 2, 0]}")
+        else:
+            # Output empty orientation if nothing was detected.
+            orientation = np.zeros((0, 4), dtype="float32")
+        position = self.pos_last
+        return dict(position=position, orientation=orientation, image_aruco=image)
+
+    def _apply_object_translation(self, rvec, tvec):
+        T_a2c = np.zeros((rvec.shape[0], 4, 4), dtype="float32")
+        T_a2c[:, 3, 3] = 1
+        # Set all rotation matrices
+        rmat = R.from_rotvec(rvec[:, 0, :])
+        T_a2c[:, :3, :3] = rmat.as_matrix()
+        # Set all translations
+        T_a2c[:, :3, 3] = tvec[:, 0, :]
+        # Offset measurements
+        position = (T_a2c @ self.object_translation[:, :])[:, :3, :]
+        return position
 
     def close(self):
         pass

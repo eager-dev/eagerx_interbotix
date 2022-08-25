@@ -1,0 +1,20 @@
+image_width: 2304
+image_height: 1536
+camera_name: logitech_c920
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [2068.030862563252, 0, 1188.752651958723, 0, 2055.070835656458, 878.6718715296925, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.1129152821862155, 0.1815815597923821, 0.02473129214378584, -0.00196350700935571, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [2225.68603515625, 0, 1181.3864195731, 0, 0, 2201.7529296875, 902.2357495971664, 0, 0, 0, 1, 0]

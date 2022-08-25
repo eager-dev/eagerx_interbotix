@@ -5,7 +5,8 @@ from collections import deque
 
 
 CAM_PATH = "/home/r2ci/eagerx-dev/eagerx_interbotix/assets/calibrations"
-CAM_EXTRINSICS = "eye_hand_calibration_2022-08-11-1659_gripper_link.yaml"
+# CAM_EXTRINSICS = "eye_hand_calibration_2022-08-12-1450.yaml"
+CAM_EXTRINSICS = "eye_hand_calibration_2022-08-16-1810.yaml"
 
 
 if __name__ == "__main__":
@@ -43,8 +44,9 @@ if __name__ == "__main__":
     graph.add(arm)
 
     # Add camera
-    CAM_INTRINSICS = "logitech_camera.yaml"
-    cam_index = 2
+    # CAM_INTRINSICS = "logitech_c170.yaml"
+    CAM_INTRINSICS = "logitech_c920.yaml"
+    cam_index = 4
 
     from eagerx_interbotix.camera.objects import Camera
     with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
@@ -128,7 +130,7 @@ if __name__ == "__main__":
 
     # Make engine
     from eagerx_reality.engine import RealEngine
-    engine = RealEngine.make(rate=rate, sync=True)
+    engine = RealEngine.make(rate=rate, sync=False)
 
     # Make backend
     # from eagerx.backends.ros1 import Ros1

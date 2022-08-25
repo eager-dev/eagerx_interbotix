@@ -34,6 +34,9 @@ class Camera(eagerx.Object):
         calibration_link: str = None,
         camera_index: int = 0,
         mode: str = "bgr",
+        fov: float = 45.0,
+        near_val: float = 0.1,
+        far_val: float = 10.0,
     ) -> ObjectSpec:
         """Make a spec to initialize a camera.
 
@@ -53,6 +56,9 @@ class Camera(eagerx.Object):
         :param calibration_link: Link related to the pose that is reset.
         :param camera_index: Camera index corresponding to the camera device number per OpenCV.
         :param mode: Available: `rgb`, `bgr`.
+        :param fov: Field of view.
+        :param near_val: Near plane distance [m].
+        :param far_val: Far plane distance [m].
         :return: ObjectSpec
         """
         spec = cls.get_specification()
@@ -73,6 +79,9 @@ class Camera(eagerx.Object):
         spec.config.optical_link = optical_link if isinstance(optical_link, str) else None
         spec.config.calibration_link = calibration_link if isinstance(calibration_link, str) else None
         spec.config.camera_index = camera_index
+        spec.config.fov = fov
+        spec.config.near_val = near_val
+        spec.config.far_val = far_val
 
         # Set rates
         spec.sensors.image.rate = rate
@@ -123,10 +132,11 @@ class Camera(eagerx.Object):
             process=2,
             mode="bgr",
             render_shape=spec.config.render_shape,
+            fov=spec.config.fov,
+            near_val=spec.config.near_val,
+            far_val=spec.config.far_val,
             debug=True
         )
-        # image.config.inputs.append("pos")
-        # image.config.inputs.append("orientation")
 
         # Connect all engine nodes
         graph.add([pos, orientation, image])

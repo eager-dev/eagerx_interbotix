@@ -82,9 +82,9 @@ class Xseries(eagerx.Object):
 
         # Modify default config
         spec.config.name = name
-        spec.config.sensors = sensors if sensors else ["position"]
-        spec.config.actuators = actuators if actuators else ["pos_control", "gripper_control"]
-        spec.config.states = states if states else ["position", "velocity", "gripper"]
+        spec.config.sensors = sensors if isinstance(sensors, list) else ["position"]
+        spec.config.actuators = actuators if isinstance(actuators, list) else ["pos_control", "gripper_control"]
+        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper"]
 
         # Add registered config params
         spec.config.robot_type = robot_type
@@ -183,7 +183,8 @@ class Xseries(eagerx.Object):
             vel_target=len(joints) * [0.0],
             pos_gain=len(joints) * [0.5],
             vel_gain=len(joints) * [1.0],
-            max_force=len(joints) * [2.0],
+            max_vel=[0.5*vel for vel in spec.config.vel_limit],
+            max_force=len(joints) * [1.0],
         )
         vel_control = JointController.make(
             "vel_control",
@@ -191,7 +192,7 @@ class Xseries(eagerx.Object):
             joints=joints,
             mode="velocity_control",
             vel_gain=len(joints) * [1.0],
-            max_force=len(joints) * [2.0],
+            max_force=len(joints) * [2.0],  # todo: limit to 1.0?
         )
         gripper = JointController.make(
             "gripper_control",
@@ -249,8 +250,10 @@ class Xseries(eagerx.Object):
             joints=joints,
             mode="position",
             profile_type="velocity",
-            profile_velocity=113,
-            profile_acceleration=15,
+            profile_acceleration=13,
+            profile_velocity=131,
+            kp_pos=800,
+            kd_pos=1000,
         )
         vel_control = XseriesArm.make(
             "vel_control",
@@ -260,6 +263,10 @@ class Xseries(eagerx.Object):
             profile_type="time",
             profile_velocity=0,  # Must be 0, else mismatch!
             profile_acceleration=0,
+            kp_pos=640,
+            kd_pos=800,
+            kp_vel=1900,
+            ki_vel=500,
         )
         gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate)
 

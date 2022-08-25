@@ -12,11 +12,6 @@ import os
 NAME = "refactor_varyGoal_term_noExcl"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
-# todo: increase friction coefficient (seems to glide too much)
-# todo: velocity control
-# todo: Increase the penalty on velocity
-# todo: switch goal with object position
-# todo: normalize actions/observations
 
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)

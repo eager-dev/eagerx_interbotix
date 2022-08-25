@@ -7,97 +7,50 @@ import stable_baselines3 as sb
 from datetime import datetime
 import os
 
-NAME = "safety_bias"
-LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
-# todo: TODAY
-# todo: Pybullet: Improve camera placement
-# todo: EAGERx: Randomize height of box --> should make it choose sides instead of top.
+def position_control(_graph, _arm, source_goal):
+    # Add position control actuator
+    if "pos_control" not in _arm.config.actuators:
+        _arm.config.actuators.append("pos_control")
 
-# todo: Copilot: Velocity control, what happens if robot arm is blocked? --> Overload...
-# todo: Copilot: Monitor effort and stop() if too high?
-# todo: Copilot: If Hardware error, stop(), smart reboot.
-# todo: Copilot: Check write_commands based on mode + vel_lim & joint limits?
-
-if __name__ == "__main__":
-    eagerx.set_log_level(eagerx.WARN)
-
-    # Define rate
-    add_bias = True
-    exclude_z = True
-    n_procs = 4
-    rate = 20
-    safe_rate = 20
-    T_max = 10.0  # [s]
-    MUST_LOG = True
-    MUST_TEST = False
-
-    # Initialize empty graph
-    graph = eagerx.Graph.create()
-
-    # Create solid object
-    from eagerx_interbotix.solid.solid import Solid
-    import yaml
-    urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
-    cam_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/calibrations"
-    cam_name = "logitech_c170"
-    cam_extr_name = "2022-08-10-1413_logitech_camera_vx300s_inaccurate_0_029error"
-    with open(f"{cam_path}/{cam_name}.yaml", "r") as f:
-        cam_intrinsics = yaml.safe_load(f)
-    with open(f"{cam_path}/{cam_extr_name}.yaml", "r") as f:
-        cam_extrinsics = yaml.safe_load(f)
-    cam_translation = cam_extrinsics["camera_to_robot"]["translation"]
-    cam_rotation = cam_extrinsics["camera_to_robot"]["rotation"]
-    solid = Solid.make(
-        "solid",
-        urdf=urdf_path + "box.urdf",
-        rate=rate,
-        cam_translation=cam_translation,
-        cam_rotation=cam_rotation,
-        cam_index=2,
-        cam_intrinsics=cam_intrinsics,
-        # sensors=["position", "yaw", "robot_view"],  # select robot_view to render.
-        sensors=["position", "yaw"],  # select robot_view to render.
-        states=["position", "velocity", "orientation", "angular_vel", "lateral_friction"],
+    # Create safety node
+    from eagerx_interbotix.safety.node import SafePositionControl
+    c = _arm.config
+    collision = dict(
+        workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
+        # workspace="eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m",
+        margin=0.01,  # [cm]
+        gui=False,
+        robot=dict(urdf=c.urdf, basePosition=c.base_pos, baseOrientation=c.base_or),
     )
-    x, y, z, dx, dy = 0.4, 0.2, 0.05, 0.03, 0.03
-    solid.sensors.position.space.update(low=[-1, -1, 0], high=[1, 1, z + 0.1])
-    solid.states.lateral_friction.space.update(low=0.1, high=0.4)
-    solid.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
-    solid.states.position.space.update(low=[x - dx, -y - dy, z], high=[x + dx, -y + dy, z])
-    graph.add(solid)
-
-    # Create solid goal
-    from eagerx_interbotix.solid.goal import Goal
-    goal = Goal.make(
-        "goal",
-        urdf=urdf_path + "box_goal.urdf",
-        rate=rate,
-        sensors=["position"],
-        states=["position", "orientation"],
+    safe = SafePositionControl.make(
+        "safety",
+        safe_rate,
+        c.joint_names,
+        c.joint_upper,
+        c.joint_lower,
+        [0.2 * vl for vl in c.vel_limit],
+        checks=3,
+        collision=collision,
     )
-    goal.sensors.position.space.update(low=[0, -1, 0], high=[1, 1, 0.15])
-    goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
-    goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
-    graph.add(goal)
+    graph.add(safe)
 
-    # Create arm
-    from eagerx_interbotix.xseries.xseries import Xseries
-    robot_type = "vx300s"
-    arm = Xseries.make(
-        name=robot_type,
-        robot_type=robot_type,
-        sensors=["position", "velocity", "ee_pos"],
-        actuators=["vel_control"],
-        states=["position", "velocity", "gripper"],
-        rate=rate,
-    )
-    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
-    graph.add(arm)
+    # Connecting safety filter to arm
+    graph.connect(**source_goal, target=safe.inputs.goal)
+    graph.connect(source=_arm.sensors.position, target=safe.inputs.current)
+    graph.connect(source=safe.outputs.filtered, target=_arm.actuators.pos_control)
+
+    return safe
+
+
+def velocity_control(_graph, _arm, source_goal):
+    # Add velocity control actuator
+    if "vel_control" not in _arm.config.actuators:
+        _arm.config.actuators.append("vel_control")
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafeVelocityControl
-    c = arm.config
+    c = _arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
         # workspace="eagerx_interbotix.safety.workspaces/exclude_ground_minus_2m",
@@ -115,27 +68,164 @@ if __name__ == "__main__":
         checks=3,
         collision=collision,
     )
-    graph.add(safe)
+    _graph.add(safe)
 
-    # Connecting observations
-    graph.connect(source=arm.sensors.position, observation="joints")
-    graph.connect(source=arm.sensors.ee_pos, observation="ee_position")
-    graph.connect(source=arm.sensors.velocity, observation="velocity")
-    graph.connect(source=solid.sensors.position, observation="solid")
-    graph.connect(source=solid.sensors.yaw, observation="yaw")
-    graph.connect(source=goal.sensors.position, observation="goal")
-    # Connecting actions
-    graph.connect(action="velocity", target=safe.inputs.goal)
+    # Connecting goal
+    graph.connect(**source_goal, target=safe.inputs.goal)
     # Connecting safety filter to arm
     graph.connect(source=arm.sensors.position, target=safe.inputs.position)
     graph.connect(source=arm.sensors.velocity, target=safe.inputs.velocity)
     graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
+
+    return safe
+
+
+NAME = "IK_10hz_circle"
+LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
+
+
+if __name__ == "__main__":
+    eagerx.set_log_level(eagerx.WARN)
+
+    # Define rate
+    # todo: Randomize yaw of box
+    # todo: retrain with excl_z = False
+    # todo: make distance larger
+    # todo: reduce bias
+    # todo: increase offset in rwd_near (to account for the gripper length)?
+    # todo: Penalize box flipping?
+    n_procs = 1
+    rate = 10  # 20
+    safe_rate = 20
+    T_max = 10.0  # [sec]
+    add_bias = True
+    excl_z = False  # todo: z appears to be necessary. How to avoid pushing?
+    USE_POS_CONTROL = False
+    MUST_LOG = False
+    MUST_TEST = True
+
+    # Initialize empty graph
+    graph = eagerx.Graph.create()
+
+    # Create solid object
+    from eagerx_interbotix.solid.solid import Solid
+    import yaml
+    urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
+    cam_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/calibrations"
+    cam_name = "logitech_c170"
+    with open(f"{cam_path}/{cam_name}.yaml", "r") as f:
+        cam_intrinsics = yaml.safe_load(f)
+    cam_translation = [0.811, 0.527, 0.43]
+    cam_rotation = [0.321, 0.801, -0.466, -0.197]
+
+    solid = Solid.make(
+        "solid",
+        urdf=urdf_path + "box.urdf",
+        rate=rate,
+        cam_translation=cam_translation,
+        cam_rotation=cam_rotation,
+        cam_index=2,
+        cam_intrinsics=cam_intrinsics,
+        # sensors=["position", "yaw", "robot_view"],  # select robot_view to render.
+        sensors=["position", "yaw"],  # select robot_view to render.
+        states=["position", "velocity", "orientation", "angular_vel", "lateral_friction"],
+    )
+
+    solid.sensors.position.space.update(low=[-1, -1, 0], high=[1, 1, 0.13])
+    graph.add(solid)
+
+    # Create solid goal
+    from eagerx_interbotix.solid.goal import Goal
+    goal = Goal.make(
+        "goal",
+        urdf=urdf_path + "box_goal.urdf",
+        rate=rate,
+        sensors=["position"],
+        states=["position", "orientation"],
+    )
+    goal.sensors.position.space.update(low=[0, -1, 0], high=[1, 1, 0.15])
+    graph.add(goal)
+
+    # Linear goal
+    # x, y, z = 0.35, 0.2, 0.05
+    # dx, dy = 0.03, 0.03
+    # solid.states.lateral_friction.space.update(low=0.1, high=0.4)
+    # solid.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
+    # solid.states.position.space.update(low=[x - dx, -y - dy, z], high=[x + dx, -y + dy, z])
+    # goal.sensors.position.space.update(low=[0, -1, 0], high=[1, 1, 0.15])
+    # goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
+    # goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
+
+    # Circular goal
+    x, y, z = 0.30, 0.0, 0.05
+    dx, dy = 0.1, 0.20
+    solid.states.lateral_friction.space.update(low=0.1, high=0.4)
+    solid.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
+    solid.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
+    goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
+    goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
+
+    # Create arm
+    from eagerx_interbotix.xseries.xseries import Xseries
+    robot_type = "vx300s"
+    arm = Xseries.make(
+        name=robot_type,
+        robot_type=robot_type,
+        sensors=["position", "velocity", "ee_pos", "ee_orn"],
+        actuators=[],
+        states=["position", "velocity", "gripper"],
+        rate=rate,
+    )
+    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
+    arm.states.position.space.low[-2] = np.pi / 2
+    arm.states.position.space.high[-2] = np.pi / 2
+    graph.add(arm)
+
+    # Create IK node
+    from eagerx_interbotix.ik.node import EndEffectorDownward
+    import eagerx_interbotix.xseries.mr_descriptions as mrd
+
+    robot_des = getattr(mrd, robot_type)
+    c = arm.config
+    ik = EndEffectorDownward.make("ik",
+                                  rate,
+                                  c.joint_names,
+                                  robot_des.Slist.tolist(),
+                                  robot_des.M.tolist(),
+                                  c.joint_upper,
+                                  c.joint_lower,
+                                  max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
+                                  max_dyaw=2 * np.pi / 2,    # 1/5 round / second
+                                  )
+    graph.add(ik)
+
+    if USE_POS_CONTROL:
+        safe = position_control(graph, arm, dict(source=ik.outputs.target))
+    else:
+        safe = velocity_control(graph, arm, dict(source=ik.outputs.dtarget))
+
+    # Connecting observations
+    graph.connect(source=arm.sensors.position, observation="joints")
+    graph.connect(source=arm.sensors.velocity, observation="velocity")
+    graph.connect(source=arm.sensors.ee_pos, observation="ee_position")
+    graph.connect(source=solid.sensors.position, observation="solid")
+    graph.connect(source=solid.sensors.yaw, observation="yaw")
+    graph.connect(source=goal.sensors.position, observation="goal")
+    # Connect IK
+    graph.connect(source=arm.sensors.position, target=ik.inputs.current)
+    graph.connect(source=arm.sensors.ee_pos, target=ik.inputs.xyz)
+    graph.connect(source=arm.sensors.ee_orn, target=ik.inputs.orn)
+    # Connecting actions
+    graph.connect(action="dxyz", target=ik.inputs.dxyz)
+    graph.connect(action="dyaw", target=ik.inputs.dyaw)
 
     # Add rendering
     if "robot_view" in solid.config.sensors:
         # Create camera
         from eagerx_interbotix.camera.objects import Camera
 
+        # translation=[ 0.75  -0.049  0.722] | rotation=[ 0.707  0.669 -0.129 -0.192]
+        # translation = [0.788 0.009 0.681] | rotation = [0.674  0.682 - 0.221 - 0.177]
         cam = Camera.make(
             "cam",
             rate=rate,
@@ -158,6 +248,7 @@ if __name__ == "__main__":
     # Define environment
     from eagerx_interbotix.env import ArmEnv
 
+
     def make_env(rank: int, use_ros: bool = True):
         gui = True if rank == 0 else False
         if rank == 0 and use_ros:
@@ -179,11 +270,11 @@ if __name__ == "__main__":
                          graph=graph,
                          engine=engine,
                          backend=backend,
-                         add_bias=add_bias,
-                         exclude_z=exclude_z,
-                         max_steps=int(T_max * rate))
+                         exclude_z=excl_z,
+                         max_steps=int(T_max * rate),
+                         add_bias=add_bias)
             env = Flatten(env)
-            env = w.rescale_action.RescaleAction(env, min_action=-1.5, max_action=1.5)
+            env = w.rescale_action.RescaleAction(env, min_action=-1.0, max_action=1.0)
             # env.render()
             return env
 
@@ -234,3 +325,4 @@ if __name__ == "__main__":
     #         action = env.action_space.sample()
     #         obs, reward, done, info = env.step(action)
     #         rgb = env.render("rgb_array")
+

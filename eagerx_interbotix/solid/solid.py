@@ -97,9 +97,9 @@ class Solid(Object):
                                        rate=spec.sensors.robot_view.rate,
                                        mode="bgr",
                                        render_shape=[height, width],
-                                       fov=57.0,  # todo: set camera intrinsics for simulation
-                                       near_val=0.1,  # todo: set camera intrinsics for simulation
-                                       far_val=100.0,  # todo: set camera intrinsics for simulation
+                                       fov=45.0,
+                                       near_val=0.1,
+                                       far_val=10.0,
                                        debug=True
                                        )
         translation = spec.config.cam_translation

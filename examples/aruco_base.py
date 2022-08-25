@@ -8,7 +8,7 @@ from eagerx_interbotix.aruco_detector import ArucoPoseDetector
 
 # Load camera intrinsic/extrinsics
 CAM_PATH = "/home/r2ci/eagerx-dev/eagerx_interbotix/assets/calibrations"
-CAM_INTRINSICS = "logitech_camera.yaml"
+CAM_INTRINSICS = "logitech_c170.yaml"
 # CAM_EXTRINSICS = "eye_hand_calibration_2022-08-10-1757.yaml"
 CAM_EXTRINSICS = "extrinsic.yaml"
 with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
@@ -23,14 +23,14 @@ height, width = ci["image_height"], ci["image_width"]
 cam_translation = ce["camera_to_robot"]["translation"]
 cam_rotation = ce["camera_to_robot"]["rotation"]
 
-use_cam = False
+use_cam = True
 aruco_id = 25
 object_translation = np.array([[0], [0], [-0.05], [1.0]], dtype="float32")
 marker_size = 0.08
 font = cv2.FONT_HERSHEY_SIMPLEX  # font for displaying text (below)
 
 if use_cam:
-    cam_index = 2
+    cam_index = 4 # 4
     cam = cv2.VideoCapture(cam_index)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)

@@ -122,13 +122,13 @@ class XseriesArm(eagerx.EngineNode):
         profile_type: str = "time",
         profile_velocity: int = 2000,
         profile_acceleration: int = 300,
-        kp_pos: Union[int, Dict[str, int]] = 640,
+        kp_pos: Union[int, Dict[str, int]] = 800,
         ki_pos: Union[int, Dict[str, int]] = 0,
-        kd_pos: Union[int, Dict[str, int]] = 3600,
+        kd_pos: Union[int, Dict[str, int]] = 0,
         kp_vel: Union[int, Dict[str, int]] = 100,
-        ki_vel: Union[int, Dict[str, int]] = 1000,
-        ff_acc: Union[int, Dict[str, int]] = 1000,
-        ff_vel: Union[int, Dict[str, int]] = 1000,
+        ki_vel: Union[int, Dict[str, int]] = 1920,
+        ff_acc: Union[int, Dict[str, int]] = 0,
+        ff_vel: Union[int, Dict[str, int]] = 0,
     ) -> NodeSpec:
         """Make the parameter specification for an Interbotix controller.
 
@@ -168,7 +168,7 @@ class XseriesArm(eagerx.EngineNode):
                            profile_velocity=profile_velocity,
                            profile_acceleration=profile_acceleration)
         spec.config.update(kp_pos=kp_pos, ki_pos=ki_pos, kd_pos=kd_pos)
-        spec.config.update(kp_vel=kp_pos, ki_vel=ki_pos)
+        spec.config.update(kp_vel=kp_vel, ki_vel=ki_vel)
         spec.config.update(ff_acc=ff_acc, ff_vel=ff_vel)
 
         # Set shape of spaces

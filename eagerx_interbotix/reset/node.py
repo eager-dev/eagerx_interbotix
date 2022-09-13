@@ -91,7 +91,7 @@ class ResetArm(eagerx.ResetNode):
         # Determine done flag
         if np.isclose(joints, goal, atol=self.threshold).all():
             is_done = True
-            self.status_pub.publish(np.array(status_map["Success"], dtype="int64"))
+            self.status_pub.publish(np.array(status_map["Success"], dtype="uint64"))
         else:
             if self.timeout > 0 and self.timeout < (t_n - self.start):
                 is_done = True

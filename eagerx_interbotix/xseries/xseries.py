@@ -14,7 +14,10 @@ from urdf_parser_py.urdf import URDF
 class Xseries(eagerx.Object):
     @classmethod
     @register.sensors(
-        pos=Space(dtype="float32"), vel=Space(dtype="float32"), ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32")
+        position=Space(dtype="float32"),
+        velocity=Space(dtype="float32"),
+        ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32"),
+        ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32"),
     )
     @register.actuators(
         pos_control=Space(dtype="float32"),
@@ -22,8 +25,8 @@ class Xseries(eagerx.Object):
         gripper_control=Space(low=[0], high=[1], dtype="float32"),
     )
     @register.engine_states(
-        pos=Space(dtype="float32"),
-        vel=Space(dtype="float32"),
+        position=Space(dtype="float32"),
+        velocity=Space(dtype="float32"),
         gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
     )
     def make(
@@ -72,16 +75,16 @@ class Xseries(eagerx.Object):
 
         # Determine gripper limits
         gripper_lower, gripper_upper = [], []
-        for name in gripper_names:
-            joint_obj = next((joint for joint in urdf.joints if joint.name == name), None)
+        for n in gripper_names:
+            joint_obj = next((joint for joint in urdf.joints if joint.name == n), None)
             gripper_lower.append(joint_obj.limit.lower)
             gripper_upper.append(joint_obj.limit.upper)
 
         # Modify default config
         spec.config.name = name
-        spec.config.sensors = sensors if sensors else ["pos"]
-        spec.config.actuators = actuators if actuators else ["pos_control", "gripper_control"]
-        spec.config.states = states if states else ["pos", "vel", "gripper"]
+        spec.config.sensors = sensors if isinstance(sensors, list) else ["position"]
+        spec.config.actuators = actuators if isinstance(actuators, list) else ["pos_control", "gripper_control"]
+        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper"]
 
         # Add registered config params
         spec.config.robot_type = robot_type
@@ -101,20 +104,21 @@ class Xseries(eagerx.Object):
         spec.config.urdf = urdf.to_xml_string()
 
         # Set rates
-        spec.sensors.pos.rate = rate
-        spec.sensors.vel.rate = rate
+        spec.sensors.position.rate = rate
+        spec.sensors.velocity.rate = rate
         spec.sensors.ee_pos.rate = rate
+        spec.sensors.ee_orn.rate = rate
         spec.actuators.pos_control.rate = rate
         spec.actuators.vel_control.rate = rate
         spec.actuators.gripper_control.rate = 1
 
         # Set variable spaces
-        spec.sensors.pos.space.update(low=joint_lower, high=joint_upper)
-        spec.sensors.vel.space.update(low=[-v for v in vel_limit], high=vel_limit)
+        spec.sensors.position.space.update(low=joint_lower, high=joint_upper)
+        spec.sensors.velocity.space.update(low=[-v for v in vel_limit], high=vel_limit)
         spec.actuators.pos_control.space.update(low=joint_lower, high=joint_upper)
         spec.actuators.vel_control.space.update(low=[-v for v in vel_limit], high=vel_limit)
-        spec.states.pos.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
-        spec.states.vel.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
+        spec.states.position.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
+        spec.states.velocity.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
         return spec
 
     @staticmethod
@@ -144,8 +148,8 @@ class Xseries(eagerx.Object):
 
         joints = spec.config.joint_names
         spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
-        spec.engine.states.pos = JointState.make(joints=joints, mode="position")
-        spec.engine.states.vel = JointState.make(joints=joints, mode="velocity")
+        spec.engine.states.position = JointState.make(joints=joints, mode="position")
+        spec.engine.states.velocity = JointState.make(joints=joints, mode="velocity")
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
@@ -154,14 +158,19 @@ class Xseries(eagerx.Object):
         # Create sensor engine nodes
         from eagerx_pybullet.enginenodes import LinkSensor, JointSensor, JointController
 
-        pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.pos.rate, process=2, joints=joints, mode="position")
-        vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.vel.rate, process=2, joints=joints, mode="velocity")
+        pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.position.rate, process=2, joints=joints, mode="position")
+        vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, process=2, joints=joints, mode="velocity")
         ee_pos_sensor = LinkSensor.make(
             "ee_pos_sensor",
             rate=spec.sensors.ee_pos.rate,
-            process=2,
             links=[spec.config.gripper_link],
             mode="position",
+        )
+        ee_orn_sensor = LinkSensor.make(
+            "ee_orn_sensor",
+            rate=spec.sensors.ee_orn.rate,
+            links=[spec.config.gripper_link],
+            mode="orientation",
         )
 
         # Create actuator engine nodes
@@ -169,27 +178,25 @@ class Xseries(eagerx.Object):
         pos_control = JointController.make(
             "pos_control",
             rate=spec.actuators.pos_control.rate,
-            process=2,
             joints=joints,
             mode="position_control",
             vel_target=len(joints) * [0.0],
             pos_gain=len(joints) * [0.5],
             vel_gain=len(joints) * [1.0],
-            max_force=len(joints) * [2.0],
+            max_vel=[0.5 * vel for vel in spec.config.vel_limit],
+            max_force=len(joints) * [1.0],
         )
         vel_control = JointController.make(
             "vel_control",
-            rate=spec.actuators.pos_control.rate,
-            process=2,
+            rate=spec.actuators.vel_control.rate,
             joints=joints,
             mode="velocity_control",
             vel_gain=len(joints) * [1.0],
-            max_force=len(joints) * [2.0],
+            max_force=len(joints) * [2.0],  # todo: limit to 1.0?
         )
         gripper = JointController.make(
             "gripper_control",
             rate=spec.actuators.gripper_control.rate,
-            process=2,
             joints=spec.config.gripper_names,
             mode="position_control",
             vel_target=[0.0, 0.0],
@@ -202,10 +209,11 @@ class Xseries(eagerx.Object):
         gripper.inputs.action.processor = MirrorAction.make(index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, pos_control, vel_control, gripper])
-        graph.connect(source=pos_sensor.outputs.obs, sensor="pos")
-        graph.connect(source=vel_sensor.outputs.obs, sensor="vel")
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.connect(source=pos_sensor.outputs.obs, sensor="position")
+        graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
+        graph.connect(source=ee_orn_sensor.outputs.obs, sensor="ee_orn")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
         graph.connect(actuator="vel_control", target=vel_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)
@@ -218,32 +226,58 @@ class Xseries(eagerx.Object):
         import eagerx_interbotix.xseries.real  # noqa # pylint: disable=unused-import
 
         # Determine gripper min/max
-        from eagerx_interbotix.xseries.real.enginestates import DummyState
+        from eagerx_interbotix.xseries.real.enginestates import DummyState, CopilotStateReset
 
+        spec.engine.states.position = CopilotStateReset.make(spec.config.name, spec.config.robot_type)
+        spec.engine.states.velocity = DummyState.make()
         spec.engine.states.gripper = DummyState.make()
-        spec.engine.states.pos = DummyState.make()
-        spec.engine.states.vel = DummyState.make()
 
         # Create sensor engine nodes
         from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
 
         joints = spec.config.joint_names
-        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.pos.rate, joints=joints, process=2, mode="position")
-        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.vel.rate, joints=joints, process=2, mode="velocity")
+        # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
+        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position")
+        ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position")
+        ee_orn_sensor = XseriesSensor.make(
+            "ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation"
+        )
+        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity")
 
         # Create actuator engine nodes
+        # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
         pos_control = XseriesArm.make(
             "pos_control",
             rate=spec.actuators.pos_control.rate,
             joints=joints,
-            process=2,
-            mode="position_control",
+            mode="position",
+            profile_type="velocity",
+            profile_acceleration=13,
+            profile_velocity=131,
+            kp_pos=800,
+            kd_pos=1000,
         )
-        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate, process=2)
+        vel_control = XseriesArm.make(
+            "vel_control",
+            rate=spec.actuators.vel_control.rate,
+            joints=joints,
+            mode="velocity",
+            profile_type="time",
+            profile_velocity=0,  # Must be 0, else mismatch!
+            profile_acceleration=0,
+            kp_pos=640,
+            kd_pos=800,
+            kp_vel=1900,
+            ki_vel=500,
+        )
+        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, pos_control, gripper])
-        graph.connect(source=pos_sensor.outputs.obs, sensor="pos")
-        graph.connect(source=vel_sensor.outputs.obs, sensor="vel")
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.connect(source=pos_sensor.outputs.obs, sensor="position")
+        graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
+        graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
+        graph.connect(source=ee_orn_sensor.outputs.obs, sensor="ee_orn")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
+        graph.connect(actuator="vel_control", target=vel_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)

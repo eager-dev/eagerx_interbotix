@@ -12,7 +12,7 @@ class Camera(eagerx.Object):
     @register.sensors(
         pos=Space(shape=(3,), dtype="float32"),
         orientation=Space(low=[-1, -1, -1, -1], high=[1, 1, 1, 1], shape=(4,), dtype="float32"),
-        rgb=Space(dtype="uint8"),
+        image=Space(dtype="uint8"),
     )
     @register.engine_states(
         pos=Space(low=[0.83, 0.0181, 0.75], high=[0.83, 0.0181, 0.75], shape=(3,), dtype="float32"),
@@ -33,6 +33,10 @@ class Camera(eagerx.Object):
         optical_link: str = None,
         calibration_link: str = None,
         camera_index: int = 0,
+        mode: str = "bgr",
+        fov: float = 45.0,
+        near_val: float = 0.1,
+        far_val: float = 10.0,
     ) -> ObjectSpec:
         """Make a spec to initialize a camera.
 
@@ -51,6 +55,10 @@ class Camera(eagerx.Object):
         :param optical_link: Link related to the pose from which to render images.
         :param calibration_link: Link related to the pose that is reset.
         :param camera_index: Camera index corresponding to the camera device number per OpenCV.
+        :param mode: Available: `rgb`, `bgr`.
+        :param fov: Field of view.
+        :param near_val: Near plane distance [m].
+        :param far_val: Far plane distance [m].
         :return: ObjectSpec
         """
         spec = cls.get_specification()
@@ -58,7 +66,7 @@ class Camera(eagerx.Object):
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
-        spec.config.sensors = sensors if isinstance(sensors, list) else ["rgb"]
+        spec.config.sensors = sensors if isinstance(sensors, list) else ["image"]
         spec.config.states = states if isinstance(states, list) else ["pos", "orientation"]
 
         # Add registered agnostic params
@@ -71,14 +79,17 @@ class Camera(eagerx.Object):
         spec.config.optical_link = optical_link if isinstance(optical_link, str) else None
         spec.config.calibration_link = calibration_link if isinstance(calibration_link, str) else None
         spec.config.camera_index = camera_index
+        spec.config.fov = fov
+        spec.config.near_val = near_val
+        spec.config.far_val = far_val
 
         # Set rates
-        spec.sensors.rgb.rate = rate
+        spec.sensors.image.rate = rate
         spec.sensors.pos.rate = rate
         spec.sensors.orientation.rate = rate
 
         # Set variable space limits
-        spec.sensors.rgb.space.update(low=0, high=255, shape=list(spec.config.render_shape + [3]))
+        spec.sensors.image.space.update(low=0, high=255, shape=list(spec.config.render_shape + [3]))
         return spec
 
     @staticmethod
@@ -114,19 +125,26 @@ class Camera(eagerx.Object):
             mode="orientation",
             links=[spec.config.optical_link],
         )
-        rgb = CameraSensor.make(
-            "rgb", rate=spec.sensors.rgb.rate, process=2, mode="rgb", render_shape=spec.config.render_shape
+        image = CameraSensor.make(
+            "image",
+            rate=spec.sensors.image.rate,
+            inputs=["pos", "orientation"],
+            process=2,
+            mode="bgr",
+            render_shape=spec.config.render_shape,
+            fov=spec.config.fov,
+            near_val=spec.config.near_val,
+            far_val=spec.config.far_val,
+            debug=True,
         )
-        rgb.config.inputs.append("pos")
-        rgb.config.inputs.append("orientation")
 
         # Connect all engine nodes
-        graph.add([pos, orientation, rgb])
+        graph.add([pos, orientation, image])
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
-        graph.connect(source=rgb.outputs.image, sensor="rgb")
-        graph.connect(source=pos.outputs.obs, target=rgb.inputs.pos)
-        graph.connect(source=orientation.outputs.obs, target=rgb.inputs.orientation)
+        graph.connect(source=image.outputs.image, sensor="image")
+        graph.connect(source=pos.outputs.obs, target=image.inputs.pos)
+        graph.connect(source=orientation.outputs.obs, target=image.inputs.orientation)
 
     @staticmethod
     @register.engine(RealEngine)
@@ -141,12 +159,12 @@ class Camera(eagerx.Object):
         # Create sensor engine nodes
         from eagerx_reality.enginenodes import CameraRender
 
-        rgb = CameraRender.make(
+        image = CameraRender.make(
             "image",
             shape=spec.config.render_shape,
-            rate=spec.sensors.rgb.rate,
+            rate=spec.sensors.image.rate,
             process=eagerx.process.NEW_PROCESS,
             camera_idx=spec.config.camera_index,
         )
-        graph.add([rgb])
-        graph.connect(source=rgb.outputs.image, sensor="rgb")
+        graph.add([image])
+        graph.connect(source=image.outputs.image, sensor="image")

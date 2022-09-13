@@ -238,10 +238,10 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     engine = PybulletEngine.make(rate=safe_rate, gui=False, egl=False, sync=True, real_time_factor=0.0, process=engine_p)
 
     # Make backend
-    # from eagerx.backends.ros1 import Ros1
-    # backend = Ros1.make()
-    from eagerx.backends.single_process import SingleProcess
-    backend = SingleProcess.make()
+    from eagerx.backends.ros1 import Ros1
+    backend = Ros1.make()
+    # from eagerx.backends.single_process import SingleProcess
+    # backend = SingleProcess.make()
 
     # Define environment
     from eagerx_interbotix.env import ArmEnv

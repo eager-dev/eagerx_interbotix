@@ -17,7 +17,7 @@ class Xseries(eagerx.Object):
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
         ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32"),
-        ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32")
+        ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32"),
     )
     @register.actuators(
         pos_control=Space(dtype="float32"),
@@ -183,7 +183,7 @@ class Xseries(eagerx.Object):
             vel_target=len(joints) * [0.0],
             pos_gain=len(joints) * [0.5],
             vel_gain=len(joints) * [1.0],
-            max_vel=[0.5*vel for vel in spec.config.vel_limit],
+            max_vel=[0.5 * vel for vel in spec.config.vel_limit],
             max_force=len(joints) * [1.0],
         )
         vel_control = JointController.make(
@@ -228,7 +228,7 @@ class Xseries(eagerx.Object):
         # Determine gripper min/max
         from eagerx_interbotix.xseries.real.enginestates import DummyState, CopilotStateReset
 
-        spec.engine.states.position = CopilotStateReset.make()
+        spec.engine.states.position = CopilotStateReset.make(spec.config.name, spec.config.robot_type)
         spec.engine.states.velocity = DummyState.make()
         spec.engine.states.gripper = DummyState.make()
 
@@ -239,7 +239,9 @@ class Xseries(eagerx.Object):
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
         pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position")
         ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position")
-        ee_orn_sensor = XseriesSensor.make("ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation")
+        ee_orn_sensor = XseriesSensor.make(
+            "ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation"
+        )
         vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity")
 
         # Create actuator engine nodes

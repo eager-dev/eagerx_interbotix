@@ -1,6 +1,6 @@
 import eagerx
 from typing import Any
-from eagerx.core.specs import EngineStateSpec, ObjectSpec
+from eagerx.core.specs import EngineStateSpec
 import pybullet
 
 
@@ -11,15 +11,12 @@ class PbXseriesGripper(eagerx.EngineState):
         spec.config.update(joints=joints, constant=constant, scale=scale, fixed=fixed)
         return spec
 
-    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
-        self.obj_name = object_spec.config.name
-        flag = self.obj_name in simulator["robots"]
-        assert flag, f'Simulator object "{simulator}" is not compatible with this simulation state.'
+    def initialize(self, spec: EngineStateSpec, simulator: Any):
         self.joints = spec.config.joints
         self.constant = spec.config.constant
         self.scale = spec.config.scale
         self.fixed = spec.config.fixed
-        self.robot = simulator["robots"][self.obj_name]
+        self.robot = simulator["object"]
         self._p = simulator["client"]
         self.physics_client_id = self._p._client
 

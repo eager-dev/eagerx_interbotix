@@ -3,7 +3,7 @@ from scipy.spatial.transform import Rotation as R
 from typing import Dict, List, Any
 import eagerx
 from eagerx import Space
-from eagerx.core.specs import NodeSpec, ObjectSpec
+from eagerx.core.specs import NodeSpec
 from eagerx.utils.utils import Msg
 import eagerx.core.register as register
 from eagerx_interbotix.aruco_detector import ArucoPoseDetector
@@ -37,10 +37,9 @@ class GoalObservationSensor(eagerx.EngineNode):
         spec.config.mode = mode
         return spec
 
-    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: NodeSpec, simulator: Any):
         self.mode = spec.config.mode
         self.simulator = simulator
-        self.obj_name = object_spec.config.name
 
     @register.states()
     def reset(self):
@@ -50,7 +49,7 @@ class GoalObservationSensor(eagerx.EngineNode):
     @register.outputs(obs=Space(dtype="float32"))
     def callback(self, t_n: float, tick: Msg):
         # Get measurement of joint state
-        obs = self.simulator[self.obj_name][self.mode]
+        obs = self.simulator[self.mode]
         return dict(obs=obs)
 
     def close(self):
@@ -105,7 +104,7 @@ class PoseDetector(eagerx.EngineNode):
         spec.config.cam_intrinsics = cam_intrinsics
         return spec
 
-    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: NodeSpec, simulator: Any):
         self.aruco_id = spec.config.aruco_id
         ci = spec.config.cam_intrinsics
 
@@ -113,8 +112,12 @@ class PoseDetector(eagerx.EngineNode):
         aruco_size = spec.config.aruco_size
         aruco_type = spec.config.aruco_type
         height, width = ci["image_height"], ci["image_width"]
-        camera_matrix = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"])
-        dist_coeffs = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"])
+        camera_matrix = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(
+            ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"]
+        )
+        dist_coeffs = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(
+            ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"]
+        )
         self.detector = ArucoPoseDetector(height, width, aruco_size, camera_matrix, dist_coeffs, aruco_type)
 
         # Calculate cam_to_base transformation matrix
@@ -134,9 +137,7 @@ class PoseDetector(eagerx.EngineNode):
         self.pos_last = position
 
     @register.inputs(image=Space(dtype="uint8"))
-    @register.outputs(position=Space(dtype="float32"),
-                      orientation=Space(dtype="float32"),
-                      image_aruco=Space(dtype="uint8"))
+    @register.outputs(position=Space(dtype="float32"), orientation=Space(dtype="float32"), image_aruco=Space(dtype="uint8"))
     def callback(self, t_n: float, image: Msg):
         image_raw = image.msgs[-1]
 

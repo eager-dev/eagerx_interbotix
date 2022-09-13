@@ -135,7 +135,7 @@ class Camera(eagerx.Object):
             fov=spec.config.fov,
             near_val=spec.config.near_val,
             far_val=spec.config.far_val,
-            debug=True
+            debug=True,
         )
 
         # Connect all engine nodes

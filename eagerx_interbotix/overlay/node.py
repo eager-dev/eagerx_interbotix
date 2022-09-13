@@ -52,8 +52,8 @@ class Overlay(eagerx.Node):
         border_px = 10
         self.ratio = spec.config.ratio
         self.h, self.w = spec.config.resolution
-        self.h_tn, self.w_tn = int(self.h*self.ratio), int(self.w*self.ratio)
-        h_tnb, w_tnb = self.h_tn + border_px*2, self.w_tn + border_px*2
+        self.h_tn, self.w_tn = int(self.h * self.ratio), int(self.w * self.ratio)
+        h_tnb, w_tnb = self.h_tn + border_px * 2, self.w_tn + border_px * 2
 
         # Determine caption size
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -65,7 +65,7 @@ class Overlay(eagerx.Node):
         x_cap, y_cap = (w_tnbc - w_cap) // 2, h_tnbc - 4
         assert x_cap > 0, "Text too wide. Shorten text or choose a smaller font size."
         assert y_cap > 0, "Text too tall. Choose a smaller font size."
-        tn = 0*np.ones((h_tnbc, w_tnbc, 3), dtype="uint8")
+        tn = 0 * np.ones((h_tnbc, w_tnbc, 3), dtype="uint8")
         tn = cv2.putText(tn, caption, (x_cap, y_cap), font, fontScale=font_scale, thickness=thickness, color=color_cap)
         self.tn_bg = PIL.Image.fromarray(tn).convert("RGB")
 

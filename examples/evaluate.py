@@ -9,8 +9,9 @@ import stable_baselines3 as sb
 import os
 
 # NAME = "space_box_dynamicsRandomization_2022-07-22-1313"
-NAME = "IK_10hz_line_vel_2022-08-16-1657"
-STEPS = 400_000
+# NAME = "IK_10hz_line_vel_2022-08-16-1657"
+NAME = "IK_10hz_circle_yaw_kn_2022-08-25-1638"
+STEPS = 1_600_000
 MODEL_NAME = f"rl_model_{STEPS}_steps"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}"
 GRAPH_FILE = f"graph.yaml"
@@ -26,6 +27,7 @@ if __name__ == "__main__":
 
     # Load graph
     graph = eagerx.Graph.load(f"{LOG_DIR}/{GRAPH_FILE}")
+    graph.gui()
 
     # todo: Overwrite goal, solid, gripper positions
     # solid = graph.get_spec("solid")

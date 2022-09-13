@@ -90,13 +90,14 @@ class EndEffectorDownward(eagerx.Node):
     def reset(self):
         pass
 
-    @register.inputs(dxyz=Space(shape=(3,), dtype="float32"),
-                     xyz=Space(shape=(3,), dtype="float32"),
-                     orn=Space(shape=(4,), dtype="float32"),
-                     dyaw=Space(shape=(), dtype="float32"),
-                     current=Space(dtype="float32"))
-    @register.outputs(target=Space(dtype="float32"),
-                      dtarget=Space(dtype="float32"))
+    @register.inputs(
+        dxyz=Space(shape=(3,), dtype="float32"),
+        xyz=Space(shape=(3,), dtype="float32"),
+        orn=Space(shape=(4,), dtype="float32"),
+        dyaw=Space(shape=(), dtype="float32"),
+        current=Space(dtype="float32"),
+    )
+    @register.outputs(target=Space(dtype="float32"), dtarget=Space(dtype="float32"))
     def callback(self, t_n: float, dxyz: Msg, xyz: Msg, orn: Msg, dyaw: Msg, current: Msg):
         dxyz = dxyz.msgs[-1]
         xyz = xyz.msgs[-1]
@@ -107,7 +108,7 @@ class EndEffectorDownward(eagerx.Node):
         # Limit dz
         dz = dxyz[-1]
         z = xyz[-1]
-        dxyz[-1] = max(dz, self.max_dxyz[-1] * (-1 + 1 / np.exp(max(0, 10*(z-self.min_z)))))
+        dxyz[-1] = max(dz, self.max_dxyz[-1] * (-1 + 1 / np.exp(max(0, 10 * (z - self.min_z)))))
 
         # Calculate the target pose
         rot_ee2b = R.from_quat(orn).as_matrix()
@@ -127,9 +128,9 @@ class EndEffectorDownward(eagerx.Node):
         theta_list, success = mr.IKinSpace(self.Slist, self.M, T_sd, current, self.eomg, self.ev)
         if success:
             target = np.array(theta_list, dtype="float32")
-            dtarget = (target-current) * self.rate  # [rad/sec]
+            dtarget = (target - current) * self.rate  # [rad/sec]
         else:
             # self.backend.logwarn("no solution")
             target = current
-            dtarget = current*0
+            dtarget = current * 0
         return dict(target=target, dtarget=dtarget)

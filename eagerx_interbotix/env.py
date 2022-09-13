@@ -1,3 +1,4 @@
+from scipy.spatial.transform import Rotation as R
 import typing as t
 import eagerx
 import numpy as np
@@ -46,7 +47,7 @@ class ArmEnv(eagerx.BaseEnv):
         obs = self._step(action)
 
         # Calculate reward
-        yaw = obs["yaw"]
+        # yaw = obs["yaw"]
         ee_pos = obs["ee_position"][0]
         goal = obs["goal"][0]
         can = obs["solid"][0]
@@ -55,7 +56,7 @@ class ArmEnv(eagerx.BaseEnv):
         # Penalize distance of the end-effector to the object
         rwd_near = 0.4 * -abs(np.linalg.norm(ee_pos - can) - 0.05)
         # Penalize distance of the object to the goal
-        rwd_dist = 3.0 * -np.linalg.norm(goal - can)
+        rwd_dist = 4.0 * -np.linalg.norm(goal - can)
         # Penalize actions (indirectly, by punishing the angular velocity.
         rwd_ctrl = 0.1 * -np.linalg.norm(des_vel - vel)
         rwd = rwd_dist + rwd_ctrl + rwd_near
@@ -92,6 +93,10 @@ class ArmEnv(eagerx.BaseEnv):
         # Sample states
         _states = self.state_space.sample()
 
+        # Sample new starting orientation (vary yaw)
+        yaw = np.random.random(()) * np.pi / 2
+        self.state_space["solid/orientation"] = R.from_euler("zyx", [yaw, 0.0, 0.0]).as_quat().astype("float32")
+
         # Sample new starting state (at least 17 cm from goal)
         radius = 0.17
         while True:
@@ -111,7 +116,7 @@ class ArmEnv(eagerx.BaseEnv):
                 if key in _states and value.shape == _states[key].shape:
                     _states[key] = value
                 else:
-                    self.bnd.logwarn(f"State `{key}` incorrectly specified.")
+                    self.backend.logwarn(f"State `{key}` incorrectly specified.")
 
         # Perform reset
         obs = self._reset(_states)

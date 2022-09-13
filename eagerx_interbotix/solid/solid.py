@@ -12,8 +12,8 @@ class Solid(Object):
     @register.sensors(
         position=Space(shape=(3,), dtype="float32"),
         orientation=Space(low=[-1, -1, -1, -1], high=[1, 1, 1, 1], shape=(4,), dtype="float32"),
-        yaw=Space(low=0., high=3.14/2, shape=(), dtype="float32"),
-        robot_view=Space(dtype="uint8")
+        yaw=Space(low=0.0, high=3.14 / 2, shape=(), dtype="float32"),
+        robot_view=Space(dtype="uint8"),
     )
     @register.engine_states(
         position=Space(low=[-1, -1, 0], high=[1, 1, 0], dtype="float32"),
@@ -93,15 +93,16 @@ class Solid(Object):
 
         # Initialize robot view
         height, width = spec.config.cam_intrinsics["image_height"], spec.config.cam_intrinsics["image_width"]
-        robot_view = CameraSensor.make("robot_view",
-                                       rate=spec.sensors.robot_view.rate,
-                                       mode="bgr",
-                                       render_shape=[height, width],
-                                       fov=45.0,
-                                       near_val=0.1,
-                                       far_val=10.0,
-                                       debug=True
-                                       )
+        robot_view = CameraSensor.make(
+            "robot_view",
+            rate=spec.sensors.robot_view.rate,
+            mode="bgr",
+            render_shape=[height, width],
+            fov=45.0,
+            near_val=0.1,
+            far_val=10.0,
+            debug=True,
+        )
         translation = spec.config.cam_translation
         rotation = spec.config.cam_rotation
         robot_view.states.pos.space = Space(low=translation, high=translation)
@@ -143,17 +144,20 @@ class Solid(Object):
         from eagerx_reality.enginenodes import CameraRender
 
         height, width = spec.config.cam_intrinsics["image_height"], spec.config.cam_intrinsics["image_width"]
-        cam = CameraRender.make('cam', spec.sensors.robot_view.rate, camera_idx=spec.config.cam_index, always_render=True, shape=[height, width])
-        aruco = PoseDetector.make("aruco",
-                                  spec.sensors.position.rate,
-                                  aruco_id=25,
-                                  aruco_size=0.08,
-                                  aruco_type="DICT_ARUCO_ORIGINAL",
-                                  object_translation=[0, 0, -0.05],
-                                  cam_translation=spec.config.cam_translation,
-                                  cam_rotation=spec.config.cam_rotation,
-                                  cam_intrinsics=spec.config.cam_intrinsics,
-                                  )
+        cam = CameraRender.make(
+            "cam", spec.sensors.robot_view.rate, camera_idx=spec.config.cam_index, always_render=True, shape=[height, width]
+        )
+        aruco = PoseDetector.make(
+            "aruco",
+            spec.sensors.position.rate,
+            aruco_id=25,
+            aruco_size=0.08,
+            aruco_type="DICT_ARUCO_ORIGINAL",
+            object_translation=[0, 0, -0.05],
+            cam_translation=spec.config.cam_translation,
+            cam_rotation=spec.config.cam_rotation,
+            cam_intrinsics=spec.config.cam_intrinsics,
+        )
         aruco.states.position.space = spec.states.position.space
 
         # Create wrapped yaw sensor

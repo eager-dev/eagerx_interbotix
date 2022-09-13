@@ -1,5 +1,5 @@
 from typing import Any
-from eagerx.core.specs import EngineStateSpec, ObjectSpec
+from eagerx.core.specs import EngineStateSpec
 import eagerx
 
 
@@ -8,7 +8,7 @@ class DummyState(eagerx.EngineState):
     def make(cls):
         return cls.get_specification()
 
-    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: EngineStateSpec, simulator: Any):
         pass
 
     def reset(self, state: Any):

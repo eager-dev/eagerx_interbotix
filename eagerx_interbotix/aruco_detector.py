@@ -26,10 +26,12 @@ class ArucoPoseDetector:
         "DICT_APRILTAG_16h5": aruco.DICT_APRILTAG_16h5,
         "DICT_APRILTAG_25h9": aruco.DICT_APRILTAG_25h9,
         "DICT_APRILTAG_36h10": aruco.DICT_APRILTAG_36h10,
-        "DICT_APRILTAG_36h11": aruco.DICT_APRILTAG_36h11
+        "DICT_APRILTAG_36h11": aruco.DICT_APRILTAG_36h11,
     }
 
-    def __init__(self, height: int, width: int, marker_size: float, camera_matrix: t.List, dist_coeffs: t.List, aruco_type: str):
+    def __init__(
+        self, height: int, width: int, marker_size: float, camera_matrix: t.List, dist_coeffs: t.List, aruco_type: str
+    ):
         self.marker_size = marker_size
         self.camera_matrix = np.array(camera_matrix, dtype="float32")
         self.dist_coeffs = np.array(dist_coeffs, dtype="float32")
@@ -39,12 +41,14 @@ class ArucoPoseDetector:
         self.parameters = aruco.DetectorParameters_create()
 
         # Correct distortion
-        self.newcameramtx, self.roi = cv2.getOptimalNewCameraMatrix(self.camera_matrix, self.dist_coeffs, (self.h, self.w), 0.0, (self.h, self.w))
+        self.newcameramtx, self.roi = cv2.getOptimalNewCameraMatrix(
+            self.camera_matrix, self.dist_coeffs, (self.h, self.w), 0.0, (self.h, self.w)
+        )
 
     def undistort(self, image_raw: np.ndarray):
         dst1 = cv2.undistort(image_raw, self.camera_matrix, self.dist_coeffs, None, self.newcameramtx)
         x, y, w1, h1 = self.roi
-        image = dst1[y:y + h1, x:x + w1]
+        image = dst1[y : y + h1, x : x + w1]
         return image
 
     def estimate_pose(self, image: np.ndarray, draw: bool = True):

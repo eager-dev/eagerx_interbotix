@@ -1,5 +1,5 @@
 from typing import Any
-from eagerx.core.specs import EngineStateSpec, ObjectSpec
+from eagerx.core.specs import EngineStateSpec
 import eagerx
 from threading import get_ident
 
@@ -9,7 +9,7 @@ class DummyState(eagerx.EngineState):
     def make(cls):
         return cls.get_specification()
 
-    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: EngineStateSpec, simulator: Any):
         pass
 
     def reset(self, state: Any):
@@ -28,14 +28,13 @@ class GoalState(eagerx.EngineState):
         spec.config.mode = mode
         return spec
 
-    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: EngineStateSpec, simulator: Any):
         self.mode = spec.config.mode
         self.simulator = simulator
-        self.obj_name = object_spec.config.name
 
     def reset(self, state: Any):
         # Set state in simulator object
-        self.simulator[self.obj_name][self.mode] = state
+        self.simulator[self.mode] = state
 
 
 class HumanReset(eagerx.EngineState):
@@ -53,8 +52,8 @@ class HumanReset(eagerx.EngineState):
         spec.config.description = description
         return spec
 
-    def initialize(self, spec: EngineStateSpec, object_spec: ObjectSpec, simulator: Any):
-        self.object_name = object_spec.config.name
+    def initialize(self, spec: EngineStateSpec, simulator: Any):
+        self.object_name = simulator["name"]
         self.description = spec.config.description
 
     def reset(self, state: Any):

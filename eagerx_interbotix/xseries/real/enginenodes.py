@@ -3,7 +3,7 @@ from scipy.spatial.transform import Rotation as R
 from typing import Dict, List, Any, Union
 import eagerx
 from eagerx import Space
-from eagerx.core.specs import NodeSpec, ObjectSpec
+from eagerx.core.specs import NodeSpec
 from eagerx.utils.utils import Msg
 import eagerx.core.register as register
 
@@ -17,6 +17,8 @@ class XseriesSensor(eagerx.EngineNode):
         cls,
         name: str,
         rate: float,
+        arm_name: str,
+        robot_type: str,
         joints: List[str],
         color: str = "cyan",
         mode: str = "position",
@@ -25,6 +27,8 @@ class XseriesSensor(eagerx.EngineNode):
 
         :param name: Node name
         :param rate: Rate of the node [Hz].
+        :param arm_name: Name of the arm.
+        :param robot_type: Manipulator type.
         :param joints: Joint names.
         :param color: Color of logged messages.
         :param mode: Types supported measurements:
@@ -40,6 +44,7 @@ class XseriesSensor(eagerx.EngineNode):
 
         # Modify default node params
         spec.config.update(name=name, rate=rate, process=eagerx.ENGINE, color=color)
+        spec.config.update(arm_name=arm_name, robot_type=robot_type)
         spec.config.inputs = ["tick"]
         spec.config.outputs = ["obs"]
 
@@ -61,16 +66,15 @@ class XseriesSensor(eagerx.EngineNode):
 
         return spec
 
-    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: NodeSpec, simulator: Any):
         self.mode = spec.config.mode
         if self.mode not in ["position", "velocity", "effort", "ee_position", "ee_orientation", "ee_pose"]:
             raise NotImplementedError(f"This mode is not implemented: {spec.config.mode}")
 
         # Get arm client
-        arm_name = object_spec.config.name
-        if "client" not in simulator[arm_name]:
-            simulator[arm_name]["client"] = Client(object_spec.config.robot_type, arm_name, group_name="arm")
-        self.arm = simulator[arm_name]["client"]
+        if "client" not in simulator:
+            simulator["client"] = Client(spec.config.robot_type, spec.config.arm_name, group_name="arm")
+        self.arm = simulator["client"]
 
         # Remap joint measurements & commands according to ordering in spec.config.joints.
         self.arm.set_joint_remapping(spec.config.joints)
@@ -116,6 +120,8 @@ class XseriesArm(eagerx.EngineNode):
         cls,
         name: str,
         rate: float,
+        arm_name: str,
+        robot_type: str,
         joints: List[str],
         color: str = "green",
         mode: str = "position",
@@ -134,6 +140,8 @@ class XseriesArm(eagerx.EngineNode):
 
         :param name: Name of the node
         :param rate: Rate of the node.
+        :param arm_name: Name of the arm.
+        :param robot_type: Manipulator type.
         :param joints: Names of all the joint motors in the group.
         :param color: Color of logged messages.
         :param mode: Either "position" or "velocity". Applies to the whole group of motors.
@@ -163,10 +171,10 @@ class XseriesArm(eagerx.EngineNode):
         spec.config.joints = joints
 
         # Set motor configs
-        spec.config.update(mode=mode,
-                           profile_type=profile_type,
-                           profile_velocity=profile_velocity,
-                           profile_acceleration=profile_acceleration)
+        spec.config.update(arm_name=arm_name, robot_type=robot_type)
+        spec.config.update(
+            mode=mode, profile_type=profile_type, profile_velocity=profile_velocity, profile_acceleration=profile_acceleration
+        )
         spec.config.update(kp_pos=kp_pos, ki_pos=ki_pos, kd_pos=kd_pos)
         spec.config.update(kp_vel=kp_vel, ki_vel=ki_vel)
         spec.config.update(ff_acc=ff_acc, ff_vel=ff_vel)
@@ -176,12 +184,11 @@ class XseriesArm(eagerx.EngineNode):
         spec.outputs.action_applied.space.shape = [len(joints)]
         return spec
 
-    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
+    def initialize(self, spec: NodeSpec, simulator: Any):
         # Get arm client
-        arm_name = object_spec.config.name
-        if "client" not in simulator[arm_name]:
-            simulator[arm_name]["client"] = Client(object_spec.config.robot_type, arm_name, group_name="arm")
-        self.arm = simulator[arm_name]["client"]
+        if "client" not in simulator:
+            simulator["client"] = Client(spec.config.robot_type, spec.config.arm_name, group_name="arm")
+        self.arm = simulator["client"]
 
         # Remap joint measurements & commands according to ordering in spec.config.joints.
         self.arm.set_joint_remapping(spec.config.joints)
@@ -199,10 +206,12 @@ class XseriesArm(eagerx.EngineNode):
             raise NotImplementedError(f"The selected control mode is not implemented: {spec.config.mode}.")
 
         # Set operating mode
-        self.arm.set_operating_mode(mode=mode,
-                                    profile_type=spec.config.profile_type,
-                                    profile_velocity=spec.config.profile_velocity,
-                                    profile_acceleration=spec.config.profile_acceleration)
+        self.arm.set_operating_mode(
+            mode=mode,
+            profile_type=spec.config.profile_type,
+            profile_velocity=spec.config.profile_velocity,
+            profile_acceleration=spec.config.profile_acceleration,
+        )
 
         # Set gains
         gains = dict()
@@ -242,6 +251,8 @@ class XseriesGripper(eagerx.EngineNode):
         cls,
         name: str,
         rate: float,
+        arm_name: str,
+        robot_type: str,
         color: str = "green",
     ) -> NodeSpec:
         """XseriesGripper spec"""
@@ -249,12 +260,13 @@ class XseriesGripper(eagerx.EngineNode):
 
         # Modify default node params
         spec.config.update(name=name, rate=rate, process=eagerx.ENGINE, color=color)
+        spec.config.update(arm_name=arm_name, robot_type=robot_type)
         spec.config.inputs = ["tick", "action"]
         spec.config.outputs = ["action_applied"]
         return spec
 
-    def initialize(self, spec: NodeSpec, object_spec: ObjectSpec, simulator: Any):
-        self.dxl = core.InterbotixRobotXSCore(object_spec.config.robot_type, object_spec.config.name, False)
+    def initialize(self, spec: NodeSpec, simulator: Any):
+        self.dxl = core.InterbotixRobotXSCore(spec.config.robot_type, spec.config.name, False)
         self.gripper = gripper.InterbotixGripperXSInterface(
             self.dxl,
             "gripper",
@@ -279,5 +291,3 @@ class XseriesGripper(eagerx.EngineNode):
 
     def shutdown(self):
         self.gripper.open(delay=0.0)
-
-

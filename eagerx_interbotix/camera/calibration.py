@@ -59,8 +59,12 @@ class CameraCalibrator(eagerx.Node):
         aruco_size = spec.config.aruco_size
         aruco_type = spec.config.aruco_type
         height, width = ci["image_height"], ci["image_width"]
-        camera_matrix = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"])
-        dist_coeffs = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"])
+        camera_matrix = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(
+            ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"]
+        )
+        dist_coeffs = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(
+            ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"]
+        )
         self.detector = ArucoPoseDetector(height, width, aruco_size, camera_matrix, dist_coeffs, aruco_type)
 
         # Calculate cam_to_base transformation matrix
@@ -74,12 +78,16 @@ class CameraCalibrator(eagerx.Node):
     def reset(self):
         pass
 
-    @register.inputs(image=Space(dtype="uint8"),
-                     ee_position=Space(shape=(3,), dtype="float32"),
-                     ee_orientation=Space(shape=(4,), dtype="float32"))
-    @register.outputs(translation=Space(low=-1, high=1, shape=(3,), dtype="float32"),
-                      orientation=Space(low=-1, high=1, shape=(4,), dtype="float32"),
-                      image_aruco=Space(dtype="uint8"))
+    @register.inputs(
+        image=Space(dtype="uint8"),
+        ee_position=Space(shape=(3,), dtype="float32"),
+        ee_orientation=Space(shape=(4,), dtype="float32"),
+    )
+    @register.outputs(
+        translation=Space(low=-1, high=1, shape=(3,), dtype="float32"),
+        orientation=Space(low=-1, high=1, shape=(4,), dtype="float32"),
+        image_aruco=Space(dtype="uint8"),
+    )
     def callback(self, t_n: float, image: Msg, ee_position: Msg, ee_orientation: Msg):
         image_raw = image.msgs[-1]
 
@@ -90,7 +98,12 @@ class CameraCalibrator(eagerx.Node):
         image, corners, ids, rvec, tvec = self.detector.estimate_pose(image, draw=True)
 
         # Get pose measurements (filter for aurco_id)
-        if rvec is not None and (ids == self.aruco_id)[:, 0].any() and len(ee_position.msgs) > 0 and len(ee_orientation.msgs) > 0:
+        if (
+            rvec is not None
+            and (ids == self.aruco_id)[:, 0].any()
+            and len(ee_position.msgs) > 0
+            and len(ee_orientation.msgs) > 0
+        ):
             mask = (ids == self.aruco_id)[:, 0]
             rvec = rvec[mask]
             tvec = tvec[mask]
@@ -103,7 +116,7 @@ class CameraCalibrator(eagerx.Node):
             T_c2a = np.zeros((4, 4), dtype="float32")
             T_c2a[3, 3] = 1
             T_c2a[:3, :3] = R.from_rotvec(rvec[0, 0, :]).as_matrix().transpose()
-            T_c2a[:3, 3] = - T_c2a[:3, :3] @ tvec[0, 0, :]
+            T_c2a[:3, 3] = -T_c2a[:3, :3] @ tvec[0, 0, :]
             # T_c2a = np.linalg.inv(T_a2c)  # todo: verify this is correct.
             # Create ee2base transformation (T_ee2b)
             T_ee2b = np.zeros((4, 4), dtype="float32")

@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 
 
-def position_control(_graph, _arm, source_goal):
+def position_control(_graph, _arm, source_goal, safe_rate):
     # Add position control actuator
     if "pos_control" not in _arm.config.actuators:
         _arm.config.actuators.append("pos_control")
@@ -33,17 +33,17 @@ def position_control(_graph, _arm, source_goal):
         checks=3,
         collision=collision,
     )
-    graph.add(safe)
+    _graph.add(safe)
 
     # Connecting safety filter to arm
-    graph.connect(**source_goal, target=safe.inputs.goal)
-    graph.connect(source=_arm.sensors.position, target=safe.inputs.current)
-    graph.connect(source=safe.outputs.filtered, target=_arm.actuators.pos_control)
+    _graph.connect(**source_goal, target=safe.inputs.goal)
+    _graph.connect(source=_arm.sensors.position, target=safe.inputs.current)
+    _graph.connect(source=safe.outputs.filtered, target=_arm.actuators.pos_control)
 
     return safe
 
 
-def velocity_control(_graph, _arm, source_goal):
+def velocity_control(_graph, _arm, source_goal, safe_rate):
     # Add velocity control actuator
     if "vel_control" not in _arm.config.actuators:
         _arm.config.actuators.append("vel_control")
@@ -71,16 +71,16 @@ def velocity_control(_graph, _arm, source_goal):
     _graph.add(safe)
 
     # Connecting goal
-    graph.connect(**source_goal, target=safe.inputs.goal)
+    _graph.connect(**source_goal, target=safe.inputs.goal)
     # Connecting safety filter to arm
-    graph.connect(source=arm.sensors.position, target=safe.inputs.position)
-    graph.connect(source=arm.sensors.velocity, target=safe.inputs.velocity)
-    graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
+    _graph.connect(source=_arm.sensors.position, target=safe.inputs.position)
+    _graph.connect(source=_arm.sensors.velocity, target=safe.inputs.velocity)
+    _graph.connect(source=safe.outputs.filtered, target=arm.actuators.vel_control)
 
     return safe
 
 
-NAME = "IK_10hz_circle"
+NAME = "IK_10hz_circle_yaw_kn"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 
@@ -88,21 +88,19 @@ if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
     # Define rate
-    # todo: Randomize yaw of box
-    # todo: retrain with excl_z = False
     # todo: make distance larger
     # todo: reduce bias
     # todo: increase offset in rwd_near (to account for the gripper length)?
     # todo: Penalize box flipping?
-    n_procs = 1
+    n_procs = 4
     rate = 10  # 20
     safe_rate = 20
     T_max = 10.0  # [sec]
     add_bias = True
     excl_z = False  # todo: z appears to be necessary. How to avoid pushing?
     USE_POS_CONTROL = False
-    MUST_LOG = False
-    MUST_TEST = True
+    MUST_LOG = True
+    MUST_TEST = False
 
     # Initialize empty graph
     graph = eagerx.Graph.create()
@@ -160,7 +158,7 @@ if __name__ == "__main__":
     x, y, z = 0.30, 0.0, 0.05
     dx, dy = 0.1, 0.20
     solid.states.lateral_friction.space.update(low=0.1, high=0.4)
-    solid.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
+    solid.states.orientation.space.update(low=[-1, -1, -1, -1], high=[1, 1, 1, 1])
     solid.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
     goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
     goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
@@ -200,9 +198,9 @@ if __name__ == "__main__":
     graph.add(ik)
 
     if USE_POS_CONTROL:
-        safe = position_control(graph, arm, dict(source=ik.outputs.target))
+        safe = position_control(graph, arm, dict(source=ik.outputs.target), safe_rate)
     else:
-        safe = velocity_control(graph, arm, dict(source=ik.outputs.dtarget))
+        safe = velocity_control(graph, arm, dict(source=ik.outputs.dtarget), safe_rate)
 
     # Connecting observations
     graph.connect(source=arm.sensors.position, observation="joints")

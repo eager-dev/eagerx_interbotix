@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.8 (2022-09-13)
+### Fix
+* Graph refactor, real world aruco working with inverse kinematics ([#23](https://github.com/eager-dev/eagerx_interbotix/issues/23)) ([`9c60b60`](https://github.com/eager-dev/eagerx_interbotix/commit/9c60b60aadf0d55e2647dde4f8e345341da85b93))
+
 ## v0.1.7 (2022-07-21)
 ### Fix
 * Refactor space and demo_real branch changes ([`436d054`](https://github.com/eager-dev/eagerx_interbotix/commit/436d05415844678b6e916c2649e90404919a135c))

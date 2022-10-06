@@ -66,8 +66,8 @@ Then, install the `copilot <https://github.com/bheijden/interbotix_copilot>`_ by
 
 Real-world experiments
 ======================
-After you installed the interbotix ros package, you should launch the driver.
-Open a terminal, source ``interbotix_ws/devel/setup.bash``, and run the command below.
+After you installed the copilot, you should launch the driver.
+Open a terminal, source the ros environment that contains the copilot, and run the command below.
 
 - Assign ``robot_model`` with the robot model (e.g. vx300s, px150, etc..).
 

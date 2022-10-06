@@ -22,7 +22,7 @@ stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
 opencv-contrib-python = "^4.6.0"
 
 [tool.poetry.dev-dependencies]
-black = "^22.1.0"
+black = "^22.10.0"
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
 pytest-timeout = "^2.1.0"

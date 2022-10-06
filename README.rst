@@ -21,7 +21,9 @@ What is the *eagerx_interbotix* package?
 ========================================
 This repository interfaces interbotix robots with EAGERx.
 EAGERx (Engine Agnostic Graph Environments for Robotics) enables users to easily define new tasks, switch from one sensor to another, and switch from simulation to reality with a single line of code by being invariant to the physics engine.
+
 `The core repository is available here <https://github.com/eager-dev/eagerx>`_.
+
 `Full documentation and tutorials (including package creation and contributing) are available here <https://eagerx.readthedocs.io/en/master/>`_.
 
 Installation
@@ -36,7 +38,7 @@ You can install the package using pip:
 Dependencies (reality only)
 ===========================
 
-We require ROS and the interbotix ros package to control the interbotix manipulators in the real world.
+We require ROS, the interbotix ros package and the `copilot <https://github.com/bheijden/interbotix_copilot>`_ to control the interbotix manipulators in the real world.
 
 If you do not have rosdep already installed (check if your shell recognizes the command ``rosdep -help``), run the code below.
 If you use the melodic distribution, use ``python-rosdep`` instead.
@@ -60,22 +62,28 @@ Then install the package by typing:
 
 If a previous installation attempt failed, remove directory ``~/interbotix_ws``, before retrying.
 
+Then, install the `copilot <https://github.com/bheijden/interbotix_copilot>`_ by following the installation instruction there.
+
 Real-world experiments
 ======================
 After you installed the interbotix ros package, you should launch the driver.
 Open a terminal, source ``interbotix_ws/devel/setup.bash``, and run the command below.
 
-- Replace ``$ROBOT_TYPE`` with the robot model (e.g. vx300s, px150, etc..).
+- Assign ``robot_model`` with the robot model (e.g. vx300s, px150, etc..).
 
-- Replace ``$OBJ_NAME`` with the name you specified when creating the arm object spec in ``eagerx``.
+- Assign ``robot_name`` with the name you specified when creating the arm object spec in ``eagerx``.
+
+- Assign ``dof`` with the number of degrees of freedom that the robot model has.
 
 - Optionally, you can set ``use_sim:=True`` to use a mock arm in ``RViz``.
 
-- See `here <https://github.com/Interbotix/interbotix_ros_manipulators/blob/main/interbotix_ros_xsarms/interbotix_xsarm_control/launch/xsarm_control.launch>`_ for more options.
+- Optionally, you can turn off rviz with ``use_rviz:=False``.
+
+- See `here <https://github.com/bheijden/interbotix_copilot/blob/master/launch/copilot.launch>`_ for more options.
 
 .. code:: shell
 
-    roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=$ROBOT_TYPE robot_name:=$OBJ_NAME use_sim:=False
+    roslaunch interbotix_copilot copilot.launch robot_model:=px150 robot_name:=px150 dof:=5 use_rviz:=True use_sim:=True 
 
 Cite EAGERx
 ===========

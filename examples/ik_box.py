@@ -99,7 +99,7 @@ if __name__ == "__main__":
     add_bias = True
     excl_z = False  # todo: z appears to be necessary. How to avoid pushing?
     USE_POS_CONTROL = False
-    MUST_LOG = True
+    MUST_LOG = False
     MUST_TEST = False
 
     # Initialize empty graph
@@ -263,6 +263,7 @@ if __name__ == "__main__":
         # engine = RealEngine.make(rate=safe_rate, sync=True)
 
         def _init():
+            graph.reload()
             env = ArmEnv(name=f"ArmEnv_{rank}",
                          rate=rate,
                          graph=graph,

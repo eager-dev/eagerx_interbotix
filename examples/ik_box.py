@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # todo: reduce bias
     # todo: increase offset in rwd_near (to account for the gripper length)?
     # todo: Penalize box flipping?
-    n_procs = 4
+    n_procs = 2
     rate = 10  # 20
     safe_rate = 20
     T_max = 10.0  # [sec]

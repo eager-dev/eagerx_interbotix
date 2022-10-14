@@ -10,26 +10,28 @@ import pytest
 NP = eagerx.process.NEW_PROCESS
 ENV = eagerx.process.ENVIRONMENT
 
-cam_intrinsics = {"image_width": 640,
-                  "image_height": 480,
-                  "camera_name": "logitech_c170",
-                  "camera_matrix": {"rows": 3, "cols": 3,
-                                    "data": [744.854391488828, 0, 327.2505862760107, 0, 742.523670731623, 207.0294448122543, 0,
-                                             0, 1]},
-                  "distortion_model": "plumb_bob",
-                  "distortion_coefficients": {
-                      "rows": 1,
-                      "cols": 5,
-                      "data": [0.1164823030284325, -0.7022013182646298, -0.01409335811907957, 0.001216661775149573, 0]},
-                  "rectification_matrix": {
-                      "rows": 3,
-                      "cols": 3,
-                      "data": [1, 0, 0, 0, 1, 0, 0, 0, 1]},
-                  "projection_matrix": {
-                      "rows": 3,
-                      "cols": 4,
-                      "data": [742.5888671875, 0, 327.7492634819646, 0, 0, 741.0902709960938, 202.927556117038, 0, 0, 0, 1, 0]}
-                  }
+cam_intrinsics = {
+    "image_width": 640,
+    "image_height": 480,
+    "camera_name": "logitech_c170",
+    "camera_matrix": {
+        "rows": 3,
+        "cols": 3,
+        "data": [744.854391488828, 0, 327.2505862760107, 0, 742.523670731623, 207.0294448122543, 0, 0, 1],
+    },
+    "distortion_model": "plumb_bob",
+    "distortion_coefficients": {
+        "rows": 1,
+        "cols": 5,
+        "data": [0.1164823030284325, -0.7022013182646298, -0.01409335811907957, 0.001216661775149573, 0],
+    },
+    "rectification_matrix": {"rows": 3, "cols": 3, "data": [1, 0, 0, 0, 1, 0, 0, 0, 1]},
+    "projection_matrix": {
+        "rows": 3,
+        "cols": 4,
+        "data": [742.5888671875, 0, 327.7492634819646, 0, 0, 741.0902709960938, 202.927556117038, 0, 0, 0, 1, 0],
+    },
+}
 
 
 def position_control(_graph, _arm, source_goal, safe_rate):
@@ -39,6 +41,7 @@ def position_control(_graph, _arm, source_goal, safe_rate):
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafePositionControl
+
     c = _arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -74,6 +77,7 @@ def velocity_control(_graph, _arm, source_goal, safe_rate):
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafeVelocityControl
+
     c = _arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -104,12 +108,8 @@ def velocity_control(_graph, _arm, source_goal, safe_rate):
     return safe
 
 
-
 @pytest.mark.timeout(60)
-@pytest.mark.parametrize(
-    "eps, num_steps, sync, rtf, p",
-    [(3, 20, True, 0, NP), (3, 20, True, 0, ENV)]
-)
+@pytest.mark.parametrize("eps, num_steps, sync, rtf, p", [(3, 20, True, 0, NP), (3, 20, True, 0, ENV)])
 def test_interbotix(eps, num_steps, sync, rtf, p):
     eagerx.set_log_level(eagerx.WARN)
 
@@ -143,6 +143,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     # Create solid object
     from eagerx_interbotix.solid.solid import Solid
+
     solid = Solid.make(
         "solid",
         urdf="cube_small.urdf",
@@ -159,6 +160,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     # Create solid goal
     from eagerx_interbotix.solid.goal import Goal
+
     goal = Goal.make(
         "goal",
         urdf="cube_small.urdf",
@@ -178,9 +180,9 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
     goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
 
-
     # Create arm
     from eagerx_interbotix.xseries.xseries import Xseries
+
     robot_type = "vx300s"
     arm = Xseries.make(
         name=robot_type,
@@ -190,7 +192,7 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
         states=["position", "velocity", "gripper"],
         rate=rate,
     )
-    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
+    arm.states.gripper.space.update(low=[0.0], high=[0.0])  # Set gripper to closed position
     arm.states.position.space.low[-2] = np.pi / 2
     arm.states.position.space.high[-2] = np.pi / 2
     graph.add(arm)
@@ -201,16 +203,17 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     robot_des = getattr(mrd, robot_type)
     c = arm.config
-    ik = EndEffectorDownward.make("ik",
-                                  rate,
-                                  c.joint_names,
-                                  robot_des.Slist.tolist(),
-                                  robot_des.M.tolist(),
-                                  c.joint_upper,
-                                  c.joint_lower,
-                                  max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
-                                  max_dyaw=2 * np.pi / 2,  # 1/5 round / second
-                                  )
+    ik = EndEffectorDownward.make(
+        "ik",
+        rate,
+        c.joint_names,
+        robot_des.Slist.tolist(),
+        robot_des.M.tolist(),
+        c.joint_upper,
+        c.joint_lower,
+        max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
+        max_dyaw=2 * np.pi / 2,  # 1/5 round / second
+    )
     graph.add(ik)
 
     if USE_POS_CONTROL:
@@ -235,10 +238,12 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
 
     # Define engines
     from eagerx_pybullet.engine import PybulletEngine
+
     engine = PybulletEngine.make(rate=safe_rate, gui=False, egl=False, sync=True, real_time_factor=0.0, process=engine_p)
 
     # Make backend
     from eagerx.backends.ros1 import Ros1
+
     backend = Ros1.make()
     # from eagerx.backends.single_process import SingleProcess
     # backend = SingleProcess.make()
@@ -247,14 +252,16 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
     from eagerx_interbotix.env import ArmEnv
 
     # Initialize Environment
-    env = ArmEnv(name=f"ArmEnv",
-                 rate=rate,
-                 graph=graph,
-                 engine=engine,
-                 backend=backend,
-                 exclude_z=excl_z,
-                 max_steps=int(T_max * rate),
-                 add_bias=add_bias)
+    env = ArmEnv(
+        name=f"ArmEnv",
+        rate=rate,
+        graph=graph,
+        engine=engine,
+        backend=backend,
+        exclude_z=excl_z,
+        max_steps=int(T_max * rate),
+        add_bias=add_bias,
+    )
 
     # Evaluate for 30 seconds in simulation
     _, action = env.reset(), env.action_space.sample()

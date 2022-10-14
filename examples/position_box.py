@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     # Create camera
     from eagerx_interbotix.camera.objects import Camera
+
     cam = Camera.make(
         "cam",
         rate=rate,
@@ -39,10 +40,16 @@ if __name__ == "__main__":
 
     # Create solid object
     from eagerx_interbotix.solid.solid import Solid
+
     urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
     solid = Solid.make(
-        "solid", urdf=urdf_path + "box.urdf", rate=rate, sensors=["pos"], base_pos=[0, 0, 1], fixed_base=False,
-        states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
+        "solid",
+        urdf=urdf_path + "box.urdf",
+        rate=rate,
+        sensors=["pos"],
+        base_pos=[0, 0, 1],
+        fixed_base=False,
+        states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"],
     )
     x, y, z, dx, dy = 0.35, 0, 0.035, 0.1, 0.20
     solid.sensors.pos.space.update(low=[0, -1, 0], high=[1, 1, z + 0.1])
@@ -62,6 +69,7 @@ if __name__ == "__main__":
 
     # Create arm
     from eagerx_interbotix.xseries.xseries import Xseries
+
     arm = Xseries.make(
         "viper",
         "vx300s",
@@ -74,6 +82,7 @@ if __name__ == "__main__":
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafePositionControl
+
     c = arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -109,6 +118,7 @@ if __name__ == "__main__":
     # Create reset node
     if real_reset:
         from eagerx_interbotix.reset.node import ResetArm
+
         reset = ResetArm.make("reset", rate, c.joint_upper, c.joint_lower, gripper=False)
         graph.add(reset)
 
@@ -132,10 +142,12 @@ if __name__ == "__main__":
     # from eagerx_reality.engine import RealEngine
     # engine = RealEngine.make(rate=rate, sync=True, process=eagerx.NEW_PROCESS)
     from eagerx_pybullet.engine import PybulletEngine
+
     engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
 
     # Make backend
     from eagerx.backends.ros1 import Ros1
+
     backend = Ros1.make()
     # from eagerx.backends.single_process import SingleProcess
     # backend = SingleProcess.make()
@@ -198,7 +210,6 @@ if __name__ == "__main__":
             # Perform reset
             obs = self._reset(states)
             return obs
-
 
     # Initialize Environment
     env = ArmEnv(name="ArmEnv", rate=rate, graph=graph, engine=engine, backend=backend, force_start=True, max_steps=max_steps)

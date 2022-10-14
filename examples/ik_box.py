@@ -15,6 +15,7 @@ def position_control(_graph, _arm, source_goal, safe_rate):
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafePositionControl
+
     c = _arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -50,6 +51,7 @@ def velocity_control(_graph, _arm, source_goal, safe_rate):
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafeVelocityControl
+
     c = _arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -80,26 +82,21 @@ def velocity_control(_graph, _arm, source_goal, safe_rate):
     return safe
 
 
-NAME = "IK_10hz_circle_yaw_kn"
+NAME = "HER_force_torque"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
-    # Define rate
-    # todo: make distance larger
-    # todo: reduce bias
-    # todo: increase offset in rwd_near (to account for the gripper length)?
-    # todo: Penalize box flipping?
-    n_procs = 2
+    n_procs = 1
     rate = 10  # 20
     safe_rate = 20
     T_max = 10.0  # [sec]
     add_bias = True
-    excl_z = False  # todo: z appears to be necessary. How to avoid pushing?
+    excl_z = False
     USE_POS_CONTROL = False
-    MUST_LOG = False
+    MUST_LOG = True
     MUST_TEST = False
 
     # Initialize empty graph
@@ -108,6 +105,7 @@ if __name__ == "__main__":
     # Create solid object
     from eagerx_interbotix.solid.solid import Solid
     import yaml
+
     urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
     cam_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/calibrations"
     cam_name = "logitech_c170"
@@ -134,25 +132,16 @@ if __name__ == "__main__":
 
     # Create solid goal
     from eagerx_interbotix.solid.goal import Goal
+
     goal = Goal.make(
         "goal",
         urdf=urdf_path + "box_goal.urdf",
         rate=rate,
-        sensors=["position"],
+        sensors=["position", "yaw"],
         states=["position", "orientation"],
     )
     goal.sensors.position.space.update(low=[0, -1, 0], high=[1, 1, 0.15])
     graph.add(goal)
-
-    # Linear goal
-    # x, y, z = 0.35, 0.2, 0.05
-    # dx, dy = 0.03, 0.03
-    # solid.states.lateral_friction.space.update(low=0.1, high=0.4)
-    # solid.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
-    # solid.states.position.space.update(low=[x - dx, -y - dy, z], high=[x + dx, -y + dy, z])
-    # goal.sensors.position.space.update(low=[0, -1, 0], high=[1, 1, 0.15])
-    # goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
-    # goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
 
     # Circular goal
     x, y, z = 0.30, 0.0, 0.05
@@ -160,21 +149,22 @@ if __name__ == "__main__":
     solid.states.lateral_friction.space.update(low=0.1, high=0.4)
     solid.states.orientation.space.update(low=[-1, -1, -1, -1], high=[1, 1, 1, 1])
     solid.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
-    goal.states.orientation.space.update(low=[0, 0, 0, 1], high=[0, 0, 0, 1])
-    goal.states.position.space.update(low=[x, y, z], high=[x, y, z])
+    goal.states.orientation.space.update(low=[-1, -1, 0, 0], high=[1, 1, 0, 0])
+    goal.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
 
     # Create arm
     from eagerx_interbotix.xseries.xseries import Xseries
+
     robot_type = "vx300s"
     arm = Xseries.make(
         name=robot_type,
         robot_type=robot_type,
-        sensors=["position", "velocity", "ee_pos", "ee_orn"],
+        sensors=["position", "velocity", "force_torque", "ee_pos", "ee_orn"],
         actuators=[],
         states=["position", "velocity", "gripper"],
         rate=rate,
     )
-    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
+    arm.states.gripper.space.update(low=[0.0], high=[0.0])  # Set gripper to closed position
     arm.states.position.space.low[-2] = np.pi / 2
     arm.states.position.space.high[-2] = np.pi / 2
     graph.add(arm)
@@ -185,16 +175,17 @@ if __name__ == "__main__":
 
     robot_des = getattr(mrd, robot_type)
     c = arm.config
-    ik = EndEffectorDownward.make("ik",
-                                  rate,
-                                  c.joint_names,
-                                  robot_des.Slist.tolist(),
-                                  robot_des.M.tolist(),
-                                  c.joint_upper,
-                                  c.joint_lower,
-                                  max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
-                                  max_dyaw=2 * np.pi / 2,    # 1/5 round / second
-                                  )
+    ik = EndEffectorDownward.make(
+        "ik",
+        rate,
+        c.joint_names,
+        robot_des.Slist.tolist(),
+        robot_des.M.tolist(),
+        c.joint_upper,
+        c.joint_lower,
+        max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
+        max_dyaw=2 * np.pi / 2,  # 1/5 round / second
+    )
     graph.add(ik)
 
     if USE_POS_CONTROL:
@@ -205,10 +196,12 @@ if __name__ == "__main__":
     # Connecting observations
     graph.connect(source=arm.sensors.position, observation="joints")
     graph.connect(source=arm.sensors.velocity, observation="velocity")
+    graph.connect(source=arm.sensors.force_torque, observation="force_torque")
     graph.connect(source=arm.sensors.ee_pos, observation="ee_position")
-    graph.connect(source=solid.sensors.position, observation="solid")
+    graph.connect(source=solid.sensors.position, observation="pos")
     graph.connect(source=solid.sensors.yaw, observation="yaw")
-    graph.connect(source=goal.sensors.position, observation="goal")
+    graph.connect(source=goal.sensors.position, observation="pos_desired")
+    graph.connect(source=goal.sensors.yaw, observation="yaw_desired")
     # Connect IK
     graph.connect(source=arm.sensors.position, target=ik.inputs.current)
     graph.connect(source=arm.sensors.ee_pos, target=ik.inputs.xyz)
@@ -222,8 +215,6 @@ if __name__ == "__main__":
         # Create camera
         from eagerx_interbotix.camera.objects import Camera
 
-        # translation=[ 0.75  -0.049  0.722] | rotation=[ 0.707  0.669 -0.129 -0.192]
-        # translation = [0.788 0.009 0.681] | rotation = [0.674  0.682 - 0.221 - 0.177]
         cam = Camera.make(
             "cam",
             rate=rate,
@@ -236,6 +227,7 @@ if __name__ == "__main__":
         graph.add(cam)
         # Create overlay
         from eagerx_interbotix.overlay.node import Overlay
+
         overlay = Overlay.make("overlay", rate=20, resolution=[480, 480], caption="robot view")
         graph.add(overlay)
         # Connect
@@ -245,36 +237,37 @@ if __name__ == "__main__":
 
     # Define environment
     from eagerx_interbotix.env import ArmEnv
-
+    from eagerx_interbotix.goal_env import GoalArmEnv
 
     def make_env(rank: int, use_ros: bool = True):
         gui = True if rank == 0 else False
         if rank == 0 and use_ros:
             from eagerx.backends.ros1 import Ros1
+
             backend = Ros1.make()
         else:
             from eagerx.backends.single_process import SingleProcess
+
             backend = SingleProcess.make()
 
         # Define engines
         from eagerx_pybullet.engine import PybulletEngine
-        engine = PybulletEngine.make(rate=safe_rate, gui=gui, egl=True, sync=True, real_time_factor=0.0)
-        # from eagerx_reality.engine import RealEngine
-        # engine = RealEngine.make(rate=safe_rate, sync=True)
+
+        engine = PybulletEngine.make(rate=safe_rate, gui=gui, egl=True, sync=True, real_time_factor=0)
 
         def _init():
             graph.reload()
-            env = ArmEnv(name=f"ArmEnv_{rank}",
-                         rate=rate,
-                         graph=graph,
-                         engine=engine,
-                         backend=backend,
-                         exclude_z=excl_z,
-                         max_steps=int(T_max * rate),
-                         add_bias=add_bias)
-            env = Flatten(env)
-            env = w.rescale_action.RescaleAction(env, min_action=-1.0, max_action=1.0)
-            # env.render()
+            env = ArmEnv(
+                name=f"ArmEnv_{rank}",
+                rate=rate,
+                graph=graph,
+                engine=engine,
+                backend=backend,
+                exclude_z=excl_z,
+                max_steps=int(T_max * rate),
+            )
+            goal_env = GoalArmEnv(env, add_bias=add_bias)
+            env = w.rescale_action.RescaleAction(goal_env, min_action=-1.0, max_action=1.0)
             return env
 
         return _init
@@ -282,15 +275,17 @@ if __name__ == "__main__":
     # Use multi-processing
     if n_procs > 1:
         from stable_baselines3.common.vec_env import SubprocVecEnv
-        train_env = SubprocVecEnv([make_env(i) for i in range(n_procs)], start_method='spawn')
+
+        train_env = SubprocVecEnv([make_env(i) for i in range(n_procs)], start_method="spawn")
     else:
-        train_env = make_env(rank=0, use_ros=False)()
+        train_env = make_env(rank=0, use_ros=True)()
 
     # Initialize model
     if MUST_LOG:
         os.mkdir(LOG_DIR)
         graph.save(f"{LOG_DIR}/graph.yaml")
         from stable_baselines3.common.callbacks import CheckpointCallback
+
         checkpoint_callback = CheckpointCallback(save_freq=25_000, save_path=LOG_DIR, name_prefix="rl_model")
     else:
         LOG_DIR = None
@@ -298,30 +293,34 @@ if __name__ == "__main__":
 
     # First train in simulation
     # train_env.render("human")
+    obs_space = train_env.observation_space
 
     # Evaluate
     if MUST_TEST:
         for eps in range(5000):
             print(f"Episode {eps}")
             _, done = train_env.reset(), False
-            while not done:
+            done = np.array([done], dtype="bool") if isinstance(done, bool) else done
+            while not done.all():
                 action = train_env.action_space.sample()
                 obs, reward, done, info = train_env.step(action)
 
     # Create experiment directory
     total_steps = 1_600_000
-    model = sb.SAC("MlpPolicy", train_env, device="cuda", verbose=1, tensorboard_log=LOG_DIR)
+    model = sb.SAC(
+        "MultiInputPolicy",
+        train_env,
+        replay_buffer_class=sb.HerReplayBuffer,
+        replay_buffer_kwargs=dict(
+            n_sampled_goal=4,
+            goal_selection_strategy="future",
+            # IMPORTANT: because the env is not wrapped with a TimeLimit wrapper
+            # we have to manually specify the max number of steps per episode
+            max_episode_length=int(T_max * rate),
+            online_sampling=True,
+        ),
+        device="cuda",
+        verbose=1,
+        tensorboard_log=LOG_DIR,
+    )
     model.learn(total_steps, callback=checkpoint_callback)
-
-    # # First train in simulation
-    # env.render("human")
-    #
-    # # Evaluate
-    # for eps in range(5000):
-    #     print(f"Episode {eps}")
-    #     _, done = env.reset(), False
-    #     while not done:
-    #         action = env.action_space.sample()
-    #         obs, reward, done, info = env.step(action)
-    #         rgb = env.render("rgb_array")
-

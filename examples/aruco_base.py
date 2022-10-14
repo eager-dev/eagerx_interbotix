@@ -15,10 +15,10 @@ with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
     ci = yaml.safe_load(f)
 with open(f"{CAM_PATH}/{CAM_EXTRINSICS}", "r") as f:
     ce = yaml.safe_load(f)
-mtx = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(ci["camera_matrix"]["rows"],
-                                                                     ci["camera_matrix"]["cols"])
-dist = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(ci["distortion_coefficients"]["rows"],
-                                                                                ci["distortion_coefficients"]["cols"])
+mtx = np.array(ci["camera_matrix"]["data"], dtype="float32").reshape(ci["camera_matrix"]["rows"], ci["camera_matrix"]["cols"])
+dist = np.array(ci["distortion_coefficients"]["data"], dtype="float32").reshape(
+    ci["distortion_coefficients"]["rows"], ci["distortion_coefficients"]["cols"]
+)
 height, width = ci["image_height"], ci["image_width"]
 cam_translation = ce["camera_to_robot"]["translation"]
 cam_rotation = ce["camera_to_robot"]["rotation"]
@@ -30,7 +30,7 @@ marker_size = 0.08
 font = cv2.FONT_HERSHEY_SIMPLEX  # font for displaying text (below)
 
 if use_cam:
-    cam_index = 4 # 4
+    cam_index = 4  # 4
     cam = cv2.VideoCapture(cam_index)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -141,7 +141,7 @@ while True:
         rmat_a2b_w[:, 1, 1] = cos_yaww
         rmat_a2b_w[:, 1, 0] = sin_yaww
         rmat_a2b_w[:, 0, 1] = -sin_yaww
-        rmat_a2b_w[:, 2, 2] = 1.
+        rmat_a2b_w[:, 2, 2] = 1.0
         # todo: Back to camera frame (for plotting purposes)
         rmat_a2c_w = T_c2b[:3, :3].transpose()[None, :, :] @ rmat_a2b_w
         last_orientation = R.from_matrix(rmat_a2c_w).as_rotvec()[:, None, :]
@@ -160,11 +160,11 @@ while True:
     key = cv2.waitKey(1)
 
     if key == 27:  # Press esc to exit
-        print('esc break...')
+        print("esc break...")
         cam.release()
         cv2.destroyAllWindows()
         break
 
-    if key == ord(' ') and use_cam:  # Press the spacebar to save
+    if key == ord(" ") and use_cam:  # Press the spacebar to save
         filename = str(time.time())[:10] + ".jpg"
         cv2.imwrite(f"./test_images/{filename}", image_raw)

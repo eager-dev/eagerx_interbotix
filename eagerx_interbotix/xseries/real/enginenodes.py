@@ -291,3 +291,36 @@ class XseriesGripper(eagerx.EngineNode):
 
     def shutdown(self):
         self.gripper.open(delay=0.0)
+
+
+class DummySensor(eagerx.EngineNode):
+    @classmethod
+    def make(
+        cls,
+        name: str,
+        rate: float,
+        color: str = "green",
+    ) -> NodeSpec:
+        """DummySensor spec"""
+        spec = cls.get_specification()
+
+        # Modify default node params
+        spec.config.update(name=name, rate=rate, process=eagerx.ENGINE, color=color)
+        spec.config.inputs = ["tick"]
+        spec.config.outputs = ["obs"]
+        return spec
+
+    def initialize(self, spec: NodeSpec, simulator: Any):
+        pass
+
+    @register.states()
+    def reset(self):
+        pass
+
+    @register.inputs(tick=Space(shape=(), dtype="int64"))
+    @register.outputs(obs=Space(dtype="float32"))
+    def callback(self, t_n: float, tick: Msg):
+        return dict(obs=np.asarray([], dtype="float32"))
+
+    def shutdown(self):
+        pass

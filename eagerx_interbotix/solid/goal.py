@@ -5,6 +5,7 @@ from eagerx import Object, Space
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
+from eagerx_interbotix.solid.yaw_node import WrappedYawSensor
 
 
 class Goal(Object):
@@ -12,6 +13,7 @@ class Goal(Object):
     @register.sensors(
         position=Space(shape=(3,), dtype="float32"),
         orientation=Space(low=[-1, -1, -1, -1], high=[1, 1, 1, 1], shape=(4,), dtype="float32"),
+        yaw=Space(low=0.0, high=3.14 / 2, shape=(), dtype="float32"),
     )
     @register.engine_states(
         position=Space(low=[-1, -1, 0], high=[1, 1, 0], dtype="float32"),
@@ -42,6 +44,7 @@ class Goal(Object):
 
         # Set rates
         spec.sensors.orientation.rate = rate
+        spec.sensors.yaw.rate = rate
         spec.sensors.position.rate = rate
         return spec
 
@@ -67,11 +70,14 @@ class Goal(Object):
 
         pos = LinkSensor.make("position", rate=spec.sensors.position.rate, mode="position")
         orientation = LinkSensor.make("orientation", rate=spec.sensors.orientation.rate, mode="orientation")
+        yaw = WrappedYawSensor.make("yaw", rate=spec.sensors.yaw.rate)
 
         # Connect all engine nodes
-        graph.add([pos, orientation])
+        graph.add([pos, orientation, yaw])
         graph.connect(source=pos.outputs.obs, sensor="position")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
+        graph.connect(source=orientation.outputs.obs, target=yaw.inputs.orientation)
+        graph.connect(source=yaw.outputs.yaw, sensor="yaw")
 
     @staticmethod
     @register.engine(RealEngine)
@@ -84,12 +90,14 @@ class Goal(Object):
         spec.engine.states.orientation = GoalState.make(mode="orientation")
 
         # Create sensor engine nodes
-        from eagerx_interbotix.solid.real.enginenodes import GoalObservationSensor
+        from eagerx_interbotix.solid.real.enginenodes import GoalObservationSensor, YawGoalObservationSensor
 
         pos = GoalObservationSensor.make("position", rate=spec.sensors.position.rate, mode="position")
         orientation = GoalObservationSensor.make("orientation", rate=spec.sensors.orientation.rate, mode="orientation")
+        yaw = YawGoalObservationSensor.make("yaw", rate=spec.sensors.yaw.rate)
 
         # Connect all engine nodes
-        graph.add([pos, orientation])
+        graph.add([pos, orientation, yaw])
         graph.connect(source=pos.outputs.obs, sensor="position")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
+        graph.connect(source=yaw.outputs.obs, sensor="yaw")

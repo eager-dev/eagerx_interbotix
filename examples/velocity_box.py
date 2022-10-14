@@ -38,6 +38,7 @@ if __name__ == "__main__":
     # Create solid object
     from eagerx_interbotix.solid.solid import Solid
     import yaml
+
     urdf_path = os.path.dirname(eagerx_interbotix.__file__) + "/solid/assets/"
     cam_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/calibrations"
     cam_name = "logitech_c170"
@@ -69,6 +70,7 @@ if __name__ == "__main__":
 
     # Create solid goal
     from eagerx_interbotix.solid.goal import Goal
+
     goal = Goal.make(
         "goal",
         urdf=urdf_path + "box_goal.urdf",
@@ -83,6 +85,7 @@ if __name__ == "__main__":
 
     # Create arm
     from eagerx_interbotix.xseries.xseries import Xseries
+
     robot_type = "vx300s"
     arm = Xseries.make(
         name=robot_type,
@@ -92,11 +95,12 @@ if __name__ == "__main__":
         states=["position", "velocity", "gripper"],
         rate=rate,
     )
-    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
+    arm.states.gripper.space.update(low=[0.0], high=[0.0])  # Set gripper to closed position
     graph.add(arm)
 
     # Create safety node
     from eagerx_interbotix.safety.node import SafeVelocityControl
+
     c = arm.config
     collision = dict(
         workspace="eagerx_interbotix.safety.workspaces/exclude_ground",
@@ -148,6 +152,7 @@ if __name__ == "__main__":
         graph.add(cam)
         # Create overlay
         from eagerx_interbotix.overlay.node import Overlay
+
         overlay = Overlay.make("overlay", rate=20, resolution=[480, 480], caption="robot view")
         graph.add(overlay)
         # Connect
@@ -162,26 +167,31 @@ if __name__ == "__main__":
         gui = True if rank == 0 else False
         if rank == 0 and use_ros:
             from eagerx.backends.ros1 import Ros1
+
             backend = Ros1.make()
         else:
             from eagerx.backends.single_process import SingleProcess
+
             backend = SingleProcess.make()
 
         # Define engines
         from eagerx_pybullet.engine import PybulletEngine
+
         engine = PybulletEngine.make(rate=safe_rate, gui=gui, egl=True, sync=True, real_time_factor=0.0)
         # from eagerx_reality.engine import RealEngine
         # engine = RealEngine.make(rate=safe_rate, sync=True)
 
         def _init():
-            env = ArmEnv(name=f"ArmEnv_{rank}",
-                         rate=rate,
-                         graph=graph,
-                         engine=engine,
-                         backend=backend,
-                         add_bias=add_bias,
-                         exclude_z=exclude_z,
-                         max_steps=int(T_max * rate))
+            env = ArmEnv(
+                name=f"ArmEnv_{rank}",
+                rate=rate,
+                graph=graph,
+                engine=engine,
+                backend=backend,
+                add_bias=add_bias,
+                exclude_z=exclude_z,
+                max_steps=int(T_max * rate),
+            )
             env = Flatten(env)
             env = w.rescale_action.RescaleAction(env, min_action=-1.5, max_action=1.5)
             # env.render()
@@ -192,7 +202,8 @@ if __name__ == "__main__":
     # Use multi-processing
     if n_procs > 1:
         from stable_baselines3.common.vec_env import SubprocVecEnv
-        train_env = SubprocVecEnv([make_env(i) for i in range(n_procs)], start_method='spawn')
+
+        train_env = SubprocVecEnv([make_env(i) for i in range(n_procs)], start_method="spawn")
     else:
         train_env = make_env(rank=0, use_ros=False)()
 
@@ -201,6 +212,7 @@ if __name__ == "__main__":
         os.mkdir(LOG_DIR)
         graph.save(f"{LOG_DIR}/graph.yaml")
         from stable_baselines3.common.callbacks import CheckpointCallback
+
         checkpoint_callback = CheckpointCallback(save_freq=25_000, save_path=LOG_DIR, name_prefix="rl_model")
     else:
         LOG_DIR = None

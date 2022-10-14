@@ -4,7 +4,7 @@ import numpy as np
 from collections import deque
 
 
-CAM_PATH = "/home/r2ci/eagerx-dev/eagerx_interbotix/assets/calibrations"
+CAM_PATH = "/home/jelle/eagerx_dev/eagerx_interbotix/assets/calibrations"
 # CAM_EXTRINSICS = "eye_hand_calibration_2022-08-12-1450.yaml"
 CAM_EXTRINSICS = "eye_hand_calibration_2022-08-16-1810.yaml"
 
@@ -25,6 +25,7 @@ if __name__ == "__main__":
 
     # Add arm
     from eagerx_interbotix.xseries.xseries import Xseries
+
     robot_type = "vx300s"
     arm = Xseries.make(
         name=robot_type,
@@ -34,9 +35,9 @@ if __name__ == "__main__":
         states=["position", "velocity", "gripper"],
         rate=rate,
     )
-    arm.states.gripper.space.update(low=[0.], high=[0.])  # Set gripper to closed position
-    arm.actuators.pos_control.space.low = [0. for _ in arm.actuators.pos_control.space.low]
-    arm.actuators.pos_control.space.high = [0. for _ in arm.actuators.pos_control.space.high]
+    arm.states.gripper.space.update(low=[0.0], high=[0.0])  # Set gripper to closed position
+    arm.actuators.pos_control.space.low = [0.0 for _ in arm.actuators.pos_control.space.low]
+    arm.actuators.pos_control.space.high = [0.0 for _ in arm.actuators.pos_control.space.high]
 
     # Point wrist downward:
     arm.actuators.pos_control.space.low[4] = 1.0
@@ -44,30 +45,31 @@ if __name__ == "__main__":
     graph.add(arm)
 
     # Add camera
-    # CAM_INTRINSICS = "logitech_c170.yaml"
-    CAM_INTRINSICS = "logitech_c920.yaml"
-    cam_index = 4
+    CAM_INTRINSICS = "logitech_c170.yaml"
+    # CAM_INTRINSICS = "logitech_c920.yaml"
+    cam_index = 0
 
     from eagerx_interbotix.camera.objects import Camera
+
     with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
         ci = yaml.safe_load(f)
     render_shape = [ci["image_height"], ci["image_width"]]
-    cam = Camera.make("cam",
-                      rate=rate,
-                      render_shape=render_shape,
-                      camera_index=cam_index)
+    cam = Camera.make("cam", rate=rate, render_shape=render_shape, camera_index=cam_index)
     graph.add(cam)
 
     # Add aruco detector
     from eagerx_interbotix.camera.calibration import CameraCalibrator
-    cali = CameraCalibrator.make("calibration",
-                                 rate=rate,
-                                 aruco_id=26,
-                                 aruco_size=0.04,
-                                 aruco_type="DICT_ARUCO_ORIGINAL",
-                                 marker_translation=marker_translation,
-                                 marker_rotation=marker_rotation,
-                                 cam_intrinsics=ci)
+
+    cali = CameraCalibrator.make(
+        "calibration",
+        rate=rate,
+        aruco_id=26,
+        aruco_size=0.04,
+        aruco_type="DICT_ARUCO_ORIGINAL",
+        marker_translation=marker_translation,
+        marker_rotation=marker_rotation,
+        cam_intrinsics=ci,
+    )
     graph.add(cali)
 
     # Connect graph
@@ -115,7 +117,7 @@ if __name__ == "__main__":
 
                 msg = f"translation={str(median_trans.round(3))} | rotation={str(median_orn.round(3))}"
                 print(msg)
-            return obs, 0., False, info
+            return obs, 0.0, False, info
 
         def reset(self):
             # Reset steps counter
@@ -130,17 +132,20 @@ if __name__ == "__main__":
 
     # Make engine
     from eagerx_reality.engine import RealEngine
+
     engine = RealEngine.make(rate=rate, sync=False)
 
     # Make backend
     # from eagerx.backends.ros1 import Ros1
     # backend = Ros1.make()
     from eagerx.backends.single_process import SingleProcess
+
     backend = SingleProcess.make()
 
     # Initialize env
-    env = CalibrationEnv(name="CalibrationEnv", rate=rate, graph=graph, engine=engine, backend=backend, force_start=True,
-                         max_steps=100000)
+    env = CalibrationEnv(
+        name="CalibrationEnv", rate=rate, graph=graph, engine=engine, backend=backend, force_start=True, max_steps=100000
+    )
     env.render()
 
     # Evaluate

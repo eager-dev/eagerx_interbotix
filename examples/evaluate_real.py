@@ -1,5 +1,4 @@
 import eagerx
-from eagerx.wrappers.flatten import Flatten
 import eagerx_interbotix
 
 # Other
@@ -8,8 +7,9 @@ import gym.wrappers as w
 import stable_baselines3 as sb
 import os
 
-NAME = "IK_10hz_line_vel_2022-08-16-1657"
-STEPS = 400_000
+# NAME = "IK_10hz_line_vel_2022-08-16-1657"
+NAME = "HER_force_torque_2022-10-12-1336"
+STEPS = 1_600_000
 # NAME = "IK_10hz_circle_2022-08-17-1559"
 # STEPS = 1_100_000
 MODEL_NAME = f"rl_model_{STEPS}_steps"
@@ -19,25 +19,28 @@ GRAPH_FILE = f"graph.yaml"
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
-    CAM_PATH = "/home/r2ci/eagerx-dev/eagerx_interbotix/assets/calibrations"
+    CAM_PATH = "/home/jelle/eagerx_dev/eagerx_interbotix/assets/calibrations"
     # CAM_INTRINSICS = "logitech_c922.yaml"
     CAM_INTRINSICS = "logitech_c170.yaml"
     with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
         cam_intrinsics = yaml.safe_load(f)
 
     # Camera settings
-    cam_index_rv = 2
-    cam_index_ov = 4
-    cam_translation_rv = [0.811, 0.527, 0.43]
-    cam_rotation_rv = [0.321, 0.801, -0.466, -0.197]
+    cam_index_rv = 0
+    cam_index_ov = 1
+    # cam_translation_rv = [0.811, 0.527, 0.43]
+    cam_translation_rv = [0.864, -0.46, 0.525]
+    # cam_rotation_rv = [0.321, 0.801, -0.466, -0.197]
+    cam_rotation_rv = [0.813, 0.363, -0.177, -0.42]
+    # translation = [0.864 - 0.46   0.525] | rotation = [0.813  0.363 - 0.177 - 0.42]
     cam_translation_ov = [0.75, -0.049, 0.722]  # todo: set correct cam overview location
     cam_rotation_ov = [0.707, 0.669, -0.129, -0.192]  # todo: set correct cam overview location
 
     sync = True
-    add_bias = True
+    add_bias = False
     exclude_z = False
     must_render = True
-    save_video = True
+    save_video = False
     T_max = 15.0  # [sec]
     rate = 10
     render_rate = rate
@@ -83,6 +86,7 @@ if __name__ == "__main__":
 
         # Create overlay
         from eagerx_interbotix.overlay.node import Overlay
+
         overlay = Overlay.make("overlay", rate=render_rate, resolution=[480, 480], caption="overview", ratio=0.3)
         graph.add(overlay)
 
@@ -92,31 +96,36 @@ if __name__ == "__main__":
         graph.render(source=overlay.outputs.image, rate=render_rate, encoding="bgr")
 
     # Define engines
-    # from eagerx_reality.engine import RealEngine
-    # engine = RealEngine.make(rate=rate, sync=sync, process=eagerx.NEW_PROCESS)
-    from eagerx_pybullet.engine import PybulletEngine
-    engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+    from eagerx_reality.engine import RealEngine
+
+    engine = RealEngine.make(rate=rate, sync=sync, process=eagerx.NEW_PROCESS)
+    # from eagerx_pybullet.engine import PybulletEngine
+    # engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
 
     # Make backend
     from eagerx.backends.ros1 import Ros1
+
     backend = Ros1.make()
     # from eagerx.backends.single_process import SingleProcess
     # backend = SingleProcess.make()
 
     # Define environment
     from eagerx_interbotix.env import ArmEnv
+    from eagerx_interbotix.goal_env import GoalArmEnv
 
     # Initialize env
-    env = ArmEnv(name="ArmEnv",
-                 rate=rate,
-                 graph=graph,
-                 engine=engine,
-                 backend=backend,
-                 add_bias=add_bias,
-                 exclude_z=exclude_z,
-                 max_steps=int(T_max * rate))
+    env = ArmEnv(
+        name="ArmEnv",
+        rate=rate,
+        graph=graph,
+        engine=engine,
+        backend=backend,
+        add_bias=add_bias,
+        exclude_z=exclude_z,
+        max_steps=int(T_max * rate),
+    )
     env.render()
-    sb_env = Flatten(env)
+    sb_env = GoalArmEnv(env)
     sb_env = w.rescale_action.RescaleAction(sb_env, min_action=-1.0, max_action=1.0)
 
     # Load model
@@ -129,9 +138,9 @@ if __name__ == "__main__":
         from concurrent.futures import ThreadPoolExecutor
 
         cam_locations = dict(overview=dict(), robot_view=dict())
-        for key, trans, rot in zip(["overview", "robot_view"],
-                                   (cam_translation_ov, cam_translation_rv),
-                                   (cam_rotation_ov, cam_rotation_rv)):
+        for key, trans, rot in zip(
+            ["overview", "robot_view"], (cam_translation_ov, cam_translation_rv), (cam_rotation_ov, cam_rotation_rv)
+        ):
             cam_locations[key]["translation"] = trans
             cam_locations[key]["rotation"] = rot
 
@@ -157,7 +166,7 @@ if __name__ == "__main__":
             try:
                 # print(f"[START]: {FILE}")
                 h, w = frames[0].shape[:2]
-                out = cv2.VideoWriter(FILE, cv2.VideoWriter_fourcc(*'mp4v'), rate, (w, h))
+                out = cv2.VideoWriter(FILE, cv2.VideoWriter_fourcc(*"mp4v"), rate, (w, h))
                 for f in frames:
                     f = f if not encoding == "bgr" else cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
                     out.write(f)

@@ -16,6 +16,7 @@ class Xseries(eagerx.Object):
     @register.sensors(
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
+        force_torque=Space(low=-20, high=20, shape=(6,), dtype="float32"),
         ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32"),
         ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32"),
     )
@@ -33,6 +34,7 @@ class Xseries(eagerx.Object):
         cls,
         name: str,
         robot_type: str,
+        arm_name=None,
         sensors=None,
         actuators=None,
         states=None,
@@ -88,6 +90,7 @@ class Xseries(eagerx.Object):
 
         # Add registered config params
         spec.config.robot_type = robot_type
+        spec.config.arm_name = arm_name if arm_name else robot_type
         spec.config.joint_names = joint_names
         spec.config.gripper_names = gripper_names
         spec.config.gripper_link = gripper_link
@@ -106,6 +109,7 @@ class Xseries(eagerx.Object):
         # Set rates
         spec.sensors.position.rate = rate
         spec.sensors.velocity.rate = rate
+        spec.sensors.force_torque.rate = rate
         spec.sensors.ee_pos.rate = rate
         spec.sensors.ee_orn.rate = rate
         spec.actuators.pos_control.rate = rate
@@ -160,6 +164,9 @@ class Xseries(eagerx.Object):
 
         pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.position.rate, process=2, joints=joints, mode="position")
         vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, process=2, joints=joints, mode="velocity")
+        ft_sensor = JointSensor.make(
+            "ft_sensor", rate=spec.sensors.force_torque.rate, process=2, joints=["wrist_rotate"], mode="force_torque"
+        )
         ee_pos_sensor = LinkSensor.make(
             "ee_pos_sensor",
             rate=spec.sensors.ee_pos.rate,
@@ -209,9 +216,10 @@ class Xseries(eagerx.Object):
         gripper.inputs.action.processor = MirrorAction.make(index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ft_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
+        graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
         graph.connect(source=ee_orn_sensor.outputs.obs, sensor="ee_orn")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
@@ -233,16 +241,45 @@ class Xseries(eagerx.Object):
         spec.engine.states.gripper = DummyState.make()
 
         # Create sensor engine nodes
-        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
+        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm, DummySensor
 
         joints = spec.config.joint_names
+        robot_type = spec.config.robot_type
+        arm_name = spec.config.arm_name
+
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
-        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position")
-        ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position")
-        ee_orn_sensor = XseriesSensor.make(
-            "ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation"
+        pos_sensor = XseriesSensor.make(
+            "pos_sensor",
+            rate=spec.sensors.position.rate,
+            joints=joints,
+            mode="position",
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
-        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity")
+        ee_pos_sensor = XseriesSensor.make(
+            "ee_pos_sensor",
+            rate=spec.sensors.ee_pos.rate,
+            joints=joints,
+            mode="ee_position",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
+        ee_orn_sensor = XseriesSensor.make(
+            "ee_orn_sensor",
+            rate=spec.sensors.ee_orn.rate,
+            joints=joints,
+            mode="ee_orientation",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
+        vel_sensor = XseriesSensor.make(
+            "vel_sensor",
+            rate=spec.sensors.velocity.rate,
+            joints=joints,
+            mode="velocity",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
 
         # Create actuator engine nodes
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
@@ -256,6 +293,8 @@ class Xseries(eagerx.Object):
             profile_velocity=131,
             kp_pos=800,
             kd_pos=1000,
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
         vel_control = XseriesArm.make(
             "vel_control",
@@ -269,11 +308,17 @@ class Xseries(eagerx.Object):
             kd_pos=800,
             kp_vel=1900,
             ki_vel=500,
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
-        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate)
+        gripper = XseriesGripper.make(
+            "gripper_control", rate=spec.actuators.gripper_control.rate, arm_name=arm_name, robot_type=robot_type
+        )
+        ft_sensor = DummySensor.make("ft_sensor", rate=spec.sensors.force_torque.rate)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper, ft_sensor])
+        graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")

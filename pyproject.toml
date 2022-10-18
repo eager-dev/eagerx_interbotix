@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "eagerx_interbotix"
+version = "0.1.8"
+license = "Apache2.0"
+description = "EAGERx interface to interbotix robot arms."
+authors = ["Jelle Luijkx <j.d.luijkx@tudelft.nl>", "Bas van der Heijden <d.s.vanderheijden@tudelft.nl>"]
+homepage = "https://github.com/eager-dev/eagerx_interbotix"
+repository = "https://github.com/eager-dev/eagerx_interbotix"
+documentation = "https://eagerx.readthedocs.io/en/master/"
+include = ["assets"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+#eagerx-gui = "^0.2.9"
+eagerx-pybullet = "^0.1.10"
+eagerx-reality = "^0.1.12"
+scipy = "^1.0"
+modern_robotics = "^1.1.0"
+urdf-parser-py = "^0.0.4"
+xacro = "^1.13.3"
+stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
+opencv-contrib-python = "^4.6.0"
+h5py = "^3.7.0"
+
+[tool.poetry.dev-dependencies]
+black = "^22.1.0"
+pytest = "^7.0"
+pytest-cov = "^3.0.0"
+pytest-timeout = "^2.1.0"
+flake8= ">=3"
+flake8-bugbear = "^22.3.23"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.semantic_release]
+version_variable = [
+    "eagerx_interbotix/__init__.py:__version__",
+    "pyproject.toml:version"
+]
+branch = "master"
+upload_to_pypi = true
+upload_to_release = true
+build_command = "pip install poetry && poetry build"

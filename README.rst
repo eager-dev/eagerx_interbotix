@@ -33,6 +33,18 @@ You can install the package using pip:
 
     pip3 install eagerx-interbotix
 
+Examples
+========
+
+This package contains the following examples that are located in the examples folder:
+
+- `collect_dataset.py`: This example show how to collect a dataset for training a model to predict the position and orientation of the object and goal from images.
+- `evaluate.py`: This example shows how to evaluate a trained RL policy.
+- `evaluate_real.py`: This example shows how to evaluate a trained RL policy on the real robot.
+- `extrinsic_calibration`: This example shows how to extrinsically calibrate the camera and robot base.
+- `ik_box.py`: This example shows how to train an RL policy.
+- `load_dataset.py`: This example shows how to load a dataset that was created using `collect_dataset.py`.
+
 Dependencies (reality only)
 ===========================
 

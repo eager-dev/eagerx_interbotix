@@ -27,11 +27,26 @@ EAGERx (Engine Agnostic Graph Environments for Robotics) enables users to easily
 Installation
 ============
 
-You can install the package using pip:
+You can install the package locally as follows.
+First you need to clone this repository:
 
-.. code:: shell
+.. code-block:: bash
 
-    pip3 install eagerx-interbotix
+    git clone git@gitlab.tudelft.nl:jelleluijkx/eagerx_interbotix.git
+    cd eagerx_tutorials
+
+*Optional* Create and source a virtual environment, (if venv is not installed run `python3 -m pip install --user virtualenv`):
+
+.. code-block:: bash
+
+    python3 -m venv venv
+    source venv/bin/activate
+
+Install the *eagerx_interbotix* package:
+
+.. code-block:: bash
+
+    pip3 install -e .
 
 Examples
 ========

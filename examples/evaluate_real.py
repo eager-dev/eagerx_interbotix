@@ -119,7 +119,7 @@ if __name__ == "__main__":
     sb_env = w.rescale_action.RescaleAction(sb_env, min_action=-1.0, max_action=1.0)
 
     # Load model
-    model = sb.SAC.load(f"{LOG_DIR}/{MODEL_NAME}", sb_env, device="cuda", verbose=1)
+    model = sb.SAC.load(f"{LOG_DIR}/{MODEL_NAME}", sb_env, verbose=1)
 
     # Setup rendering
     if save_video and must_render:

@@ -54,6 +54,10 @@ Examples
 This package contains the following examples that are located in the examples folder:
 
 - `collect_dataset.py`: This example show how to collect a dataset for training a model to predict the position and orientation of the object and goal from images.
+  In line 39 of this file you can find: `dataset_size = 1000`.
+  This value specifies the number of samples that will be generated for the dataset.
+  You can set this value to your desired dataset size.
+  The dataset will be saved in `eagerx_interbotix/logs/HER_force_torque_2022-10-1836/dataset_[dataset_size].hdf5`
 - `evaluate.py`: This example shows how to evaluate a trained RL policy.
 - `evaluate_real.py`: This example shows how to evaluate a trained RL policy on the real robot.
 - `extrinsic_calibration`: This example shows how to extrinsically calibrate the camera and robot base.

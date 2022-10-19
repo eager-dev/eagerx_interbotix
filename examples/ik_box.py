@@ -1,6 +1,5 @@
 import eagerx
 import eagerx_interbotix
-from eagerx.wrappers.flatten import Flatten
 import numpy as np
 import gym.wrappers as w
 import stable_baselines3 as sb

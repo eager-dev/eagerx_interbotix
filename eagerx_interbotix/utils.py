@@ -1,10 +1,7 @@
 import os
 import eagerx_interbotix
-import rospy
-import rosparam
 import yaml
 from eagerx.utils.utils_sub import substitute_args
-from xml.etree import cElementTree as ElementTree
 
 
 class XmlListConfig(list):
@@ -88,6 +85,8 @@ def launch_node(launch_file, args):
 
 
 def get_configs(robot_model: str, motor_config: str, mode_config: str):
+    import rospy
+
     module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
     config_path = module_path + "config/"
     try:
@@ -119,6 +118,10 @@ def generate_urdf(
     external_urdf_loc="",
     load_gazebo_configs=False,
 ):
+    import rosparam
+    import rospy
+
+
     module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
     launch_file = module_path + "xsarm_description.launch"
     cli_args = [

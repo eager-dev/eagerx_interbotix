@@ -121,7 +121,6 @@ def generate_urdf(
     import rosparam
     import rospy
 
-
     module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
     launch_file = module_path + "xsarm_description.launch"
     cli_args = [

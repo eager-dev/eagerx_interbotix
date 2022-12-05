@@ -34,7 +34,7 @@ if __name__ == "__main__":
     rate = 10
     render_rate = rate
     safe_rate = 10
-    dataset_size = 20000
+    dataset_size = 100
     image_width, image_height = 64, 64
 
     # Camera settings
@@ -141,7 +141,7 @@ if __name__ == "__main__":
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = sb_env.step(action)
             rgb = env.render("rgb_array")
-            if len(rgb.shape) > 0 and step % 2 == 0:
+            if len(rgb.shape) > 0 and rgb.shape[0] > 0 and step % 2 == 0:
                 image_dataset[data_i] = rgb
                 boxpos_dataset[data_i] = obs["achieved_goal"][:-1]
                 boxyaw_dataset[data_i] = obs["achieved_goal"][-1]

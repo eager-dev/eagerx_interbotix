@@ -6,6 +6,7 @@ from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
 
+from typing import List
 
 class Camera(eagerx.Object):
     @classmethod
@@ -59,6 +60,8 @@ class Camera(eagerx.Object):
         :param fov: Field of view.
         :param near_val: Near plane distance [m].
         :param far_val: Far plane distance [m].
+        :param light_direction: Specifies the world position of the light source, the direction is from the light source
+                                position to the origin of the world frame., list of 3 floats.
         :return: ObjectSpec
         """
         spec = cls.get_specification()
@@ -115,7 +118,8 @@ class Camera(eagerx.Object):
         spec.engine.states.orientation = LinkState.make(mode="orientation", link=spec.config.calibration_link)
 
         # Create sensor engine nodes
-        from eagerx_pybullet.enginenodes import LinkSensor, CameraSensor
+        from eagerx_pybullet.enginenodes import LinkSensor
+        from eagerx_interbotix.camera.pybullet.enginenodes import CameraSensor
 
         pos = LinkSensor.make("pos", rate=spec.sensors.pos.rate, process=2, mode="position", links=[spec.config.optical_link])
         orientation = LinkSensor.make(
@@ -135,6 +139,7 @@ class Camera(eagerx.Object):
             fov=spec.config.fov,
             near_val=spec.config.near_val,
             far_val=spec.config.far_val,
+            states=["light_direction"],
             debug=True,
         )
 

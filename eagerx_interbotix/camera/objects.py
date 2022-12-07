@@ -38,6 +38,8 @@ class Camera(eagerx.Object):
         fov: float = 45.0,
         near_val: float = 0.1,
         far_val: float = 10.0,
+        light_direction_low = None,
+        light_direction_high = None,
     ) -> ObjectSpec:
         """Make a spec to initialize a camera.
 
@@ -85,6 +87,8 @@ class Camera(eagerx.Object):
         spec.config.fov = fov
         spec.config.near_val = near_val
         spec.config.far_val = far_val
+        spec.config.light_direction_low = light_direction_low
+        spec.config.light_direction_high = light_direction_high
 
         # Set rates
         spec.sensors.image.rate = rate
@@ -142,6 +146,10 @@ class Camera(eagerx.Object):
             states=["light_direction"],
             debug=True,
         )
+        if spec.config.light_direction_low:
+            image.states.light_direction.space.update(low=spec.config.light_direction_low)
+        if spec.config.light_direction_high:
+            image.states.light_direction.space.update(high=spec.config.light_direction_high)
 
         # Connect all engine nodes
         graph.add([pos, orientation, image])

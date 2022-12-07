@@ -202,6 +202,8 @@ class CameraSensor(EngineNode):
         if mode in ["rgb", "bgr"]:
 
             def cb():
+                if "lightDirection" in cb_args:
+                    p.configureDebugVisualizer(pybullet.COV_ENABLE_GUI, 1, lightPosition=cb_args["lightDirection"])
                 _, _, rgba, depth, seg = p.getCameraImage(**cb_args)
                 rgba = rgba if mode == "rgb" else cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGRA)
                 return rgba[:, :, :3]

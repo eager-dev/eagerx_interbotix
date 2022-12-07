@@ -8,9 +8,6 @@ import stable_baselines3 as sb
 import os
 import h5py
 import pathlib
-import sys
-
-sys.path.append("/opt/ros/noetic/lib/python3/dist-packages")
 
 
 NAME = "HER_force_torque_2022-10-13-1836"
@@ -34,8 +31,16 @@ if __name__ == "__main__":
     rate = 10
     render_rate = rate
     safe_rate = 10
-    dataset_size = 20000
+    dataset_size = 10000
     image_width, image_height = 64, 64
+    light_direction_low = [-50, -50, 0]
+    light_direction_high = [50, 50, 50]
+    robot_color_low = [0, 0, 0, 1]
+    robot_color_high = [0.2, 0.2, 0.2, 1]
+    box_color_low = [0.9*1, 0.9*0.388, 0.9*0.278, 1]
+    box_color_high = [1, 1.1*0.388, 1.1*0.278, 1]
+    goal_color_low = [0.9*0.278, 0.9*1, 0.9*0.388, 1]
+    goal_color_high = [1.1*0.278, 1, 1.1*0.388, 1]
 
     # Camera settings
     cam_index_ov = 1
@@ -58,12 +63,18 @@ if __name__ == "__main__":
     safe = graph.get_spec("safety")
     safe.config.collision.workspace = "eagerx_interbotix.safety.workspaces/exclude_ground"
 
+    # Set color robot
+    vx300s = graph.get_spec("vx300s")
+    vx300s.states.color.space.update(low=robot_color_low, high=robot_color_high)
+
     # Modify aruco rate
     solid = graph.get_spec("solid")
     solid.sensors.robot_view.rate = 10
     solid.sensors.position.rate = 10
     solid.sensors.orientation.rate = 10
     solid.config.cam_intrinsics = cam_intrinsics
+    solid.states.color.space.update(low=box_color_low, high=box_color_high)
+
 
     # Modify goal
     goal = graph.get_spec("goal")
@@ -73,6 +84,7 @@ if __name__ == "__main__":
     solid.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
     goal.states.orientation.space.update(low=[-1, -1, 0, 0], high=[1, 1, 0, 0])
     goal.states.position.space.update(low=[x, -y - dy, 0], high=[x + dx, y + dy, 0])
+    goal.states.color.space.update(low=goal_color_low, high=goal_color_high)
 
     # Add rendering
     if must_render:
@@ -89,10 +101,13 @@ if __name__ == "__main__":
             camera_index=cam_index_ov,
             render_shape=cam_render_shape,
             fov=45.0,
+            light_direction_low=light_direction_low,
+            light_direction_high=light_direction_high,
         )
         graph.add(cam)
         cam.states.pos.space.update(low=cam_translation_ov, high=cam_translation_ov)
         cam.states.orientation.space.update(low=cam_rotation_ov, high=cam_rotation_ov)
+
 
         # Connect
         graph.render(source=cam.sensors.image, rate=render_rate, encoding="bgr")
@@ -101,6 +116,10 @@ if __name__ == "__main__":
     from eagerx_pybullet.engine import PybulletEngine
 
     engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+
+    # Add surface
+    surfuce_urdf = ROOT_DIR / "eagerx_interbotix" / "solid" / "assets" / "surface.urdf"
+    engine.add_object("surface", urdf=str(surfuce_urdf), baseOrientation=[0, 0, 0, 1])
 
     # Make backend
     from eagerx.backends.single_process import SingleProcess
@@ -141,7 +160,7 @@ if __name__ == "__main__":
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = sb_env.step(action)
             rgb = env.render("rgb_array")
-            if len(rgb.shape) > 0 and step % 2 == 0:
+            if len(rgb.shape) > 0 and rgb.shape[0] > 0 and step % 2 == 0:
                 image_dataset[data_i] = rgb
                 boxpos_dataset[data_i] = obs["achieved_goal"][:-1]
                 boxyaw_dataset[data_i] = obs["achieved_goal"][-1]

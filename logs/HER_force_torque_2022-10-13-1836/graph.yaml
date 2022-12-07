@@ -37,6 +37,7 @@ backup:
       states:
       - position
       - orientation
+      - color
       urdf: /home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/solid/assets/box_goal.urdf
     entity_type: eagerx_interbotix.solid.goal/Goal
     sensors:
@@ -103,6 +104,22 @@ backup:
           - 0.0
           shape:
           - 3
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 0.278
+            - 1 0
+            - 0.388
+            - 1
+          low:
+            - 0.278
+            - 1 0
+            - 0.388
+            - 1
+          shape:
+            - 4
   ik:
     config:
       M:
@@ -769,6 +786,7 @@ backup:
       - orientation
       - angular_vel
       - lateral_friction
+      - color
       urdf: /home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/solid/assets/box.urdf
     entity_type: eagerx_interbotix.solid.solid/Solid
     sensors:
@@ -866,6 +884,22 @@ backup:
           low: 0.0
           shape:
           - 3
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 1
+            - 0.388
+            - 0.278
+            - 1
+          low:
+            - 1
+            - 0.388
+            - 0.278
+            - 1
+          shape:
+            - 4
   vx300s:
     actuators:
       gripper_control:
@@ -1124,6 +1158,7 @@ backup:
       - position
       - velocity
       - gripper
+      - color
       urdf: "<?xml version=\"1.0\" ?>\n<robot name=\"vx300s\" version=\"1.0\">\n \
         \ <material name=\"interbotix_black\">\n    <texture filename=\"/home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/../assets/meshes/interbotix_black.png\"\
         />\n  </material>\n  <link name=\"world\"/>\n  <joint name=\"fixed\" type=\"\
@@ -1482,6 +1517,22 @@ backup:
           - 0.0
           - 0.0
           shape: null
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 0.1
+            - 0.1
+            - 0.1
+            - 1.0
+          low:
+            - 0.0
+            - 0.0
+            - 0.0
+            - 1.0
+          shape:
+            - 4
 connects:
 - - - ik
     - outputs
@@ -1790,6 +1841,7 @@ nodes:
       states:
       - position
       - orientation
+      - color
       urdf: /home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/solid/assets/box_goal.urdf
     entity_type: eagerx_interbotix.solid.goal/Goal
     sensors:
@@ -1856,6 +1908,23 @@ nodes:
           - 0.05
           shape:
           - 3
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 0.278
+            - 1
+            - 0.388
+            - 1
+          low:
+            - 0.278
+            - 1
+            - 0.388
+            - 1
+          shape:
+            - 4
+
   ik:
     config:
       M:
@@ -2522,6 +2591,7 @@ nodes:
       - orientation
       - angular_vel
       - lateral_friction
+      - color
       urdf: /home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/solid/assets/box.urdf
     entity_type: eagerx_interbotix.solid.solid/Solid
     sensors:
@@ -2619,6 +2689,22 @@ nodes:
           low: 0.0
           shape:
           - 3
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 1
+            - 0.388
+            - 0.278
+            - 1
+          low:
+            - 1
+            - 0.388
+            - 0.278
+            - 1
+          shape:
+            - 4
   vx300s:
     actuators:
       gripper_control:
@@ -2878,6 +2964,7 @@ nodes:
       - position
       - velocity
       - gripper
+      - color
       urdf: "<?xml version=\"1.0\" ?>\n<robot name=\"vx300s\" version=\"1.0\">\n \
         \ <material name=\"interbotix_black\">\n    <texture filename=\"/home/jelle/eagerx_dev/eagerx_interbotix/eagerx_interbotix/../assets/meshes/interbotix_black.png\"\
         />\n  </material>\n  <link name=\"world\"/>\n  <joint name=\"fixed\" type=\"\
@@ -3236,3 +3323,19 @@ nodes:
           - 0.0
           - 0.0
           shape: null
+      color:
+        processor: null
+        space:
+          dtype: float32
+          high:
+            - 0.1
+            - 0.1
+            - 0.1
+            - 1.0
+          low:
+            - 0.0
+            - 0.0
+            - 0.0
+            - 1.0
+          shape:
+            - 4

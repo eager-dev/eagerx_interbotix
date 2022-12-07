@@ -37,6 +37,7 @@ class Xseries(eagerx.Object):
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
         gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
+        color=Space(low=[0, 0, 0, 1], high=[0.1, 0.1, 0.1, 1], shape=(4,), dtype="float32"),
     )
     def make(
         cls,
@@ -97,7 +98,7 @@ class Xseries(eagerx.Object):
         spec.config.name = name
         spec.config.sensors = sensors if isinstance(sensors, list) else ["position"]
         spec.config.actuators = actuators if isinstance(actuators, list) else ["pos_control", "gripper_control"]
-        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper"]
+        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper", "color"]
 
         # Add registered config params
         spec.config.robot_type = robot_type
@@ -165,13 +166,14 @@ class Xseries(eagerx.Object):
         scale = float(upper[0]) - float(lower[0])
 
         # Create engine_states (no agnostic states defined in this case)
-        from eagerx_interbotix.xseries.pybullet.enginestates import PbXseriesGripper
+        from eagerx_interbotix.xseries.pybullet.enginestates import PbXseriesGripper, LinkColorState
         from eagerx_pybullet.enginestates import JointState
 
         joints = spec.config.joint_names
         spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
         spec.engine.states.position = JointState.make(joints=joints, mode="position")
         spec.engine.states.velocity = JointState.make(joints=joints, mode="velocity")
+        spec.engine.states.color = LinkColorState.make()
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:

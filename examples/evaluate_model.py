@@ -50,12 +50,12 @@ def predict_privileged_observation(
     img = Image.fromarray(np.asarray(rgb, dtype="uint8"))
     t_img = input_transforms(img)
     y = model(t_img.unsqueeze(0).to(device))
-    prediction = (y.cpu().numpy()[0] - target_mean) / target_std
+    prediction = (y.cpu().numpy()[0] * target_std) + target_mean
     box_xy = prediction[:2]
     box_z = 0.05
     box_yaw = prediction[2]
     goal_xy = prediction[3:5]
-    goal_z = 0.05
+    goal_z = 0.0
     goal_yaw = prediction[5]
     obs["achieved_goal"] = np.array([box_xy[0], box_xy[1], box_z, box_yaw])
     obs["desired_goal"] = np.array([goal_xy[0], goal_xy[1], goal_z, goal_yaw])
@@ -65,6 +65,7 @@ def predict_privileged_observation(
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
+    episodes = 100
     # Set seed
     seed = 42
     torch.manual_seed(seed)
@@ -239,20 +240,20 @@ if __name__ == "__main__":
     model = sb.SAC.load(f"{LOG_DIR}/{MODEL_NAME}", sb_env, verbose=1)
 
     # Evaluate
-    data_i = 0
-    eps = 0
-    while True:
+    for i in range(episodes):
         step = 0
-        eps += 1
-        print(f"Episode: {eps}, data index: {data_i}")
+        print(f"Episode {i+1}/{episodes}")
         obs, done, frames = sb_env.reset(), False, []
         obs = predict_privileged_observation(obs=obs, env=env, model=pytorch_model, target_mean=target_mean, target_std=target_std, device=device)
-        while not done and data_i < dataset_size:
+        episodic_rewards = []
+        episodic_reward = 0
+        while not done:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = sb_env.step(action)
             obs = predict_privileged_observation(obs=obs, env=env, model=pytorch_model, target_mean=target_mean, target_std=target_std, device=device)
             step += 1
-        if not data_i < dataset_size:
-            break
-
+            episodic_reward += reward
+        episodic_rewards.append(episodic_reward)
+        print(f"Episode reward: {episodic_reward}")
+    print(f"Average reward: {np.mean(episodic_rewards)}")
     f.close()

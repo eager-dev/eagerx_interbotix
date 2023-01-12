@@ -7,10 +7,11 @@ import gym
 
 # Define environment
 class ArmEnv(eagerx.BaseEnv):
-    def __init__(self, name, rate, graph, engine, backend, max_steps: int, add_bias: bool = False, exclude_z: bool = True):
+    def __init__(self, name, rate, graph, engine, backend, max_steps: int, add_bias: bool = False, exclude_z: bool = True, seed: int = 0):
         super().__init__(name, rate, graph, engine, backend=backend, force_start=False)
         self.steps = 0
         self.max_steps = max_steps
+        self._seed = seed
 
         # Exclude
         self._exclude_z = exclude_z
@@ -20,6 +21,11 @@ class ArmEnv(eagerx.BaseEnv):
         self._add_bias = add_bias
         self.solid_bias = None
         self.yaw_bias = None
+
+        self._state_space = self.state_space
+        for key in self._state_space.spaces.keys():
+            self._state_space.spaces[key]._space.seed(seed)
+            seed += 1
 
         # Rwd publishers
         self._pub_rwd = self.backend.Publisher(f"{self.ns}/environment/reward", "float32")
@@ -103,17 +109,17 @@ class ArmEnv(eagerx.BaseEnv):
         self.yaw_bias = 0.5 * (0.1 * np.pi / 2) * (2 * np.random.random() - 1)
 
         # Sample states
-        _states = self.state_space.sample()
+        _states = self._state_space.sample()
 
         # Sample new starting orientation (vary yaw)
         yaw = np.random.random(()) * np.pi / 2
-        self.state_space["solid/orientation"] = R.from_euler("zyx", [yaw, 0.0, 0.0]).as_quat().astype("float32")
+        self._state_space["solid/orientation"] = R.from_euler("zyx", [yaw, 0.0, 0.0]).as_quat().astype("float32")
 
         # Sample new starting state (at least 17 cm from goal)
         radius = 0.17
         while True:
-            solid_pos = self.state_space["solid/position"].sample()
-            goal_pos = self.state_space["goal/position"].sample()
+            solid_pos = self._state_space["solid/position"].sample()
+            goal_pos = self._state_space["goal/position"].sample()
             if np.linalg.norm(solid_pos[:2] - goal_pos[:2]) > radius:
                 _states["solid/position"] = solid_pos
                 _states["goal/position"] = goal_pos
@@ -121,7 +127,7 @@ class ArmEnv(eagerx.BaseEnv):
 
         # Set initial position state
         if "solid/aruco/position" in _states:
-            self.state_space["solid/aruco/position"] = solid_pos
+            self._state_space["solid/aruco/position"] = solid_pos
 
         # Overwrite with user provided states
         if states is not None:

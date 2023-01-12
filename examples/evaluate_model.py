@@ -15,6 +15,9 @@ import numpy as np
 import random
 from torchvision.transforms import transforms
 from PIL import Image
+import time
+
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 NAME = "HER_force_torque_2022-10-13-1836"
@@ -27,11 +30,9 @@ GRAPH_FILE = f"graph.yaml"
 
 def predict_privileged_observation(
     model: torch.nn.Module,
-    env: gym.Env,
     obs: np.ndarray,
     target_mean: np.ndarray,
     target_std: np.ndarray,
-    device: torch.device,
 ) -> np.ndarray:
     """Predict the privileged observation from the given observation.
 
@@ -43,11 +44,8 @@ def predict_privileged_observation(
     Returns:
         np.ndarray: The predicted privileged observation.
     """
-    valid_render = False
-    while not valid_render:
-        rgb = env.render("rgb_array")
-        valid_render = len(rgb.shape) > 0 and rgb.shape[0] > 0
-    img = Image.fromarray(np.asarray(rgb, dtype="uint8"))
+    rgb = obs["image"]
+    img = Image.fromarray(np.asarray(rgb.squeeze(), dtype="uint8"))
     t_img = input_transforms(img)
     y = model(t_img.unsqueeze(0).to(device))
     prediction = (y.cpu().numpy()[0] * target_std) + target_mean
@@ -65,12 +63,14 @@ def predict_privileged_observation(
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
-    episodes = 100
+    episodes = 1
     # Set seed
     seed = 42
+    torch.use_deterministic_algorithms(True)
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+
     date_time = "2023-01-04_15-14"
     dataset_size = 20000
     batch_size = 32
@@ -199,6 +199,7 @@ if __name__ == "__main__":
         cam.states.pos.space.update(low=cam_translation_ov, high=cam_translation_ov)
         cam.states.orientation.space.update(low=cam_rotation_ov, high=cam_rotation_ov)
 
+        graph.connect(source=cam.sensors.image, observation="image")
 
         # Connect
         graph.render(source=cam.sensors.image, rate=render_rate, encoding="bgr")
@@ -232,6 +233,7 @@ if __name__ == "__main__":
         add_bias=False,
         exclude_z=False,
         max_steps=int(T_max * rate),
+        seed=seed,
     )
     sb_env = GoalArmEnv(env, add_bias=False)
     sb_env = w.rescale_action.RescaleAction(sb_env, min_action=-1.0, max_action=1.0)
@@ -244,13 +246,14 @@ if __name__ == "__main__":
         step = 0
         print(f"Episode {i+1}/{episodes}")
         obs, done, frames = sb_env.reset(), False, []
-        obs = predict_privileged_observation(obs=obs, env=env, model=pytorch_model, target_mean=target_mean, target_std=target_std, device=device)
+        obs = predict_privileged_observation(obs=obs, model=pytorch_model, target_mean=target_mean, target_std=target_std)
         episodic_rewards = []
         episodic_reward = 0
         while not done:
+            obs.pop("image")
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = sb_env.step(action)
-            obs = predict_privileged_observation(obs=obs, env=env, model=pytorch_model, target_mean=target_mean, target_std=target_std, device=device)
+            obs = predict_privileged_observation(obs=obs, model=pytorch_model, target_mean=target_mean, target_std=target_std)
             step += 1
             episodic_reward += reward
         episodic_rewards.append(episodic_reward)

@@ -962,6 +962,7 @@ backup:
         window: 1
     config:
       actuators: []
+      arm_name: vx300s
       base_or:
       - 0
       - 0
@@ -1901,11 +1902,11 @@ nodes:
           high:
           - 0.4
           - 0.2
-          - 0.05
+          - 0.0
           low:
           - 0.3
           - -0.2
-          - 0.05
+          - 0.0
           shape:
           - 3
       color:
@@ -2768,6 +2769,7 @@ nodes:
     config:
       actuators:
       - vel_control
+      arm_name: vx300s
       base_or:
       - 0
       - 0

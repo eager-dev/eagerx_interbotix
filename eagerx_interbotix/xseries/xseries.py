@@ -180,7 +180,8 @@ class Xseries(eagerx.Object):
             spec.engine.states.gripper.fixed = True
 
         # Create sensor engine nodes
-        from eagerx_pybullet.enginenodes import LinkSensor, JointSensor, JointController
+        from eagerx_pybullet.enginenodes import LinkSensor, JointSensor
+        from eagerx_interbotix.xseries.pybullet.enginenodes import JointController
 
         pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.position.rate, process=2, joints=joints, mode="position")
         vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, process=2, joints=joints, mode="velocity")
@@ -220,6 +221,7 @@ class Xseries(eagerx.Object):
             mode="velocity_control",
             vel_gain=len(joints) * [1.0],
             max_force=len(joints) * [2.0],  # todo: limit to 1.0?
+            delay_state=True,
         )
         gripper = JointController.make(
             "gripper_control",
@@ -326,8 +328,11 @@ class Xseries(eagerx.Object):
             profile_acceleration=0,
             kp_pos=640,
             kd_pos=800,
-            kp_vel=1900,
-            ki_vel=500,
+            # kp_vel=5000,
+            kp_vel=4000,
+            # kp_vel=5200, ki_vel=1000 sometimes overshoot and collision
+            # ki_vel=1000, # works nicely with kp_vel=3000, ki_vel=800; also kp_vel=4000, ki_vel=800. also kp_vel=5000, ki_vel=1000
+            ki_vel=800, # works nicely with kp_vel=3000, ki_vel=800; also kp_vel=4000, ki_vel=800
             arm_name=arm_name,
             robot_type=robot_type,
         )

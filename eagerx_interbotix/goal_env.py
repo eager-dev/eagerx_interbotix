@@ -11,8 +11,10 @@ class GoalArmEnv(gym.Wrapper):
         self._env = env
         flattened_space = spaces.Dict()
         space = dict(self._env.observation_space)
-        space.pop("force_torque")
-        space.pop("image")
+        if "force_torque" in space:
+            space.pop("force_torque")
+        if "image" in space:
+            space.pop("image")
         self._og_des_pos_space = space.pop("pos_desired")
         flat_des_pos_space = spaces.flatten_space(self._og_des_pos_space)
         self._og_des_yaw_space = space.pop("yaw_desired")
@@ -44,8 +46,10 @@ class GoalArmEnv(gym.Wrapper):
 
     def observation(self, obs):
         goal_obs = dict()
-        obs.pop("force_torque")
-        image = obs.pop("image")
+        if "force_torque" in obs:
+            obs.pop("force_torque")
+        if "image" in obs:
+            goal_obs["image"] = obs.pop("image")
         flat_des_pos = spaces.flatten(self._og_des_pos_space, obs.pop("pos_desired"))
         flat_des_yaw = spaces.flatten(self._og_des_yaw_space, obs.pop("yaw_desired"))
 
@@ -63,7 +67,6 @@ class GoalArmEnv(gym.Wrapper):
             obs["yaw"] = (obs["yaw"] + self.yaw_bias) % (np.pi / 2)
 
         goal_obs["observation"] = spaces.flatten(self._og_observation_space, obs)
-        goal_obs["image"] = image
         return goal_obs
 
     def step(self, action):
@@ -80,8 +83,8 @@ class GoalArmEnv(gym.Wrapper):
         rwd_ctrl = 0.1 * -np.linalg.norm(des_vel - vel)
         rwd_force = -0.0001 * (force[1] - 3.2) ** 2
         info["rwd_goal_independent"] = rwd_near + rwd_ctrl + rwd_force
-        info["image"] = obs["image"]
-
+        if "image" in obs:
+            info["image"] = obs["image"]
         return self.observation(obs), rwd, done, info
 
     def reset(self):

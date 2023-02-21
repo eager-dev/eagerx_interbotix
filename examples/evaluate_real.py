@@ -6,9 +6,10 @@ import yaml
 import gym.wrappers as w
 import stable_baselines3 as sb
 import os
+from pathlib import Path
 
 
-NAME = "HER_force_torque_2022-10-12-1336"
+NAME = "HER_force_torque_2022-10-13-1836"
 STEPS = 1_600_000
 MODEL_NAME = f"rl_model_{STEPS}_steps"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}"
@@ -17,17 +18,23 @@ GRAPH_FILE = f"graph.yaml"
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
 
-    CAM_PATH = "/home/jelle/eagerx_dev/eagerx_interbotix/assets/calibrations"
-    CAM_INTRINSICS = "logitech_c922.yaml"
+    CAM_PATH = Path(__file__).parent.parent / "assets" / "calibrations"
+    # CAM_INTRINSICS = "logitech_c920.yaml"
     # CAM_INTRINSICS = "logitech_c170.yaml"
+    CAM_INTRINSICS = "logitech_c170_2023_02_17.yaml"
+    CAM_EXTRINSICS = "eye_hand_calibration_2023-02-20-0837.yaml"
     with open(f"{CAM_PATH}/{CAM_INTRINSICS}", "r") as f:
         cam_intrinsics = yaml.safe_load(f)
+    with open(f"{CAM_PATH}/{CAM_EXTRINSICS}", "r") as f:
+        cam_extrinsics = yaml.safe_load(f)
 
     # Camera settings
-    cam_index_rv = 0
-    cam_index_ov = 1
-    cam_translation_rv = [0.811, 0.527, 0.43]
-    cam_rotation_rv = [0.321, 0.801, -0.466, -0.197]
+    cam_index_rv = 2
+    cam_index_ov = 4
+    # cam_translation_rv = [0.8180345156496724, -0.3318065050748368, 0.477317337911922]
+    # cam_rotation_rv = [0.8074835373063064, 0.3348182573521671, -0.19011004163291714, -0.4469063029240955]
+    cam_translation_rv = cam_extrinsics["camera_to_robot"]["translation"]
+    cam_rotation_rv = cam_extrinsics["camera_to_robot"]["rotation"]
     cam_translation_ov = [0.75, -0.049, 0.722]  # todo: set correct cam overview location
     cam_rotation_ov = [0.707, 0.669, -0.129, -0.192]  # todo: set correct cam overview location
 
@@ -35,8 +42,9 @@ if __name__ == "__main__":
     add_bias = False
     exclude_z = False
     must_render = True
+    reset = True
     save_video = False
-    T_max = 15.0  # [sec]
+    T_max = 10.0  # [sec]
     rate = 10
     render_rate = rate
     safe_rate = 10
@@ -47,6 +55,7 @@ if __name__ == "__main__":
     # Use correct workspace in safety filter
     safe = graph.get_spec("safety")
     safe.config.collision.workspace = "eagerx_interbotix.safety.workspaces/exclude_ground"
+    safe.config.vel_limit = [x * 0.9 for x in safe.config.vel_limit]
 
     # Modify aruco rate
     solid = graph.get_spec("solid")
@@ -56,6 +65,14 @@ if __name__ == "__main__":
     solid.config.cam_translation = cam_translation_rv
     solid.config.cam_rotation = cam_rotation_rv
     solid.config.cam_intrinsics = cam_intrinsics
+
+    goal = graph.get_spec("goal")
+    # x, y, z = 0.35, 0.15, 0.05
+    # x, y, z = 0.35, 0.15, 0.05
+    x, y, z = 0.35, 0.15, 0
+    goal.config.sensors = ["position", "orientation", "yaw"]
+    # goal.states.orientation.space.update(low=[1, 0, 0, 0], high=[1, 0, 0, 0])
+    goal.states.position.space.update(low=[x, y, 0.05], high=[x, y, 0.05])
 
     # Add rendering
     if must_render:
@@ -82,17 +99,42 @@ if __name__ == "__main__":
         # Create overlay
         from eagerx_interbotix.overlay.node import Overlay
 
-        overlay = Overlay.make("overlay", rate=render_rate, resolution=[480, 480], caption="overview", ratio=0.3)
+        overlay = Overlay.make("overlay", cam_intrinsics=cam_intrinsics, cam_extrinsics=cam_extrinsics, rate=render_rate, resolution=[480, 480], caption="overview", ratio=0.3)
         graph.add(overlay)
 
         # Connect
         graph.connect(source=solid.sensors.robot_view, target=overlay.inputs.main)
+        graph.connect(source=goal.sensors.orientation, target=overlay.inputs.goal_ori)
+        graph.connect(source=goal.sensors.position, target=overlay.inputs.goal_pos)
         graph.connect(source=cam.sensors.image, target=overlay.inputs.thumbnail)
         graph.render(source=overlay.outputs.image, rate=render_rate, encoding="bgr")
+    graph.gui()
+    if reset:
+        from eagerx_interbotix.reset.node import MoveUp
+
+        ik = graph.get_spec("ik")
+        vx300s = graph.get_spec("vx300s")
+
+        reset_node = MoveUp.make("reset", rate=rate)
+        graph.add(reset_node)
+        graph.connect(action="dxyz", target=reset_node.feedthroughs.dxyz)
+        graph.connect(action="dyaw", target=reset_node.feedthroughs.dyaw)
+        graph.disconnect(action="dxyz", target=ik.inputs.dxyz)
+        graph.disconnect(action="dyaw", target=ik.inputs.dyaw)
+        graph.connect(source=reset_node.outputs.dxyz, target=ik.inputs.dxyz)
+        graph.connect(source=reset_node.outputs.dyaw, target=ik.inputs.dyaw)
+        graph.connect(source=vx300s.states.velocity, target=reset_node.targets.velocity)
+        graph.connect(source=vx300s.sensors.ee_pos, target=reset_node.inputs.ee_position)
+        graph.connect(source=vx300s.sensors.ee_orn, target=reset_node.inputs.ee_orientation)
+        graph.disconnect(source=safe.outputs.filtered, target=vx300s.actuators.vel_control)
+        graph.connect(source=safe.outputs.filtered, target=vx300s.actuators.vel_control, delay=0.25)
+    # graph.gui()
 
     # Define engines
-    from eagerx_reality.engine import RealEngine
-    engine = RealEngine.make(rate=rate, sync=sync, process=eagerx.NEW_PROCESS)
+    # from eagerx_reality.engine import RealEngine
+    # engine = RealEngine.make(rate=rate, sync=sync, process=eagerx.NEW_PROCESS)
+    from eagerx_pybullet.engine import PybulletEngine
+    engine = PybulletEngine.make(rate=rate, sync=sync, process=eagerx.NEW_PROCESS)
 
     # Make backend
     from eagerx.backends.ros1 import Ros1
@@ -167,6 +209,7 @@ if __name__ == "__main__":
             print(f"[SAVED]: {FILE}")
 
     # Evaluate
+    obs, done, frames = sb_env.reset(), False, []
     for eps in range(5000):
         print(f"Episode {eps}")
         obs, done, frames = sb_env.reset(), False, []

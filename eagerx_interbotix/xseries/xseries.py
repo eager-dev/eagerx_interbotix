@@ -37,7 +37,7 @@ class Xseries(eagerx.Object):
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
         gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
-        color=Space(low=[0, 0, 0, 1], high=[0.1, 0.1, 0.1, 1], shape=(4,), dtype="float32"),
+        # color=Space(low=[0, 0, 0, 1], high=[0.1, 0.1, 0.1, 1], shape=(4,), dtype="float32"),
     )
     def make(
         cls,
@@ -173,7 +173,7 @@ class Xseries(eagerx.Object):
         spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
         spec.engine.states.position = JointState.make(joints=joints, mode="position")
         spec.engine.states.velocity = JointState.make(joints=joints, mode="velocity")
-        spec.engine.states.color = LinkColorState.make()
+        # spec.engine.states.color = LinkColorState.make()
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
@@ -329,10 +329,10 @@ class Xseries(eagerx.Object):
             kp_pos=640,
             kd_pos=800,
             # kp_vel=5000,
-            kp_vel=4000,
-            # kp_vel=5200, ki_vel=1000 sometimes overshoot and collision
-            # ki_vel=1000, # works nicely with kp_vel=3000, ki_vel=800; also kp_vel=4000, ki_vel=800. also kp_vel=5000, ki_vel=1000
-            ki_vel=800, # works nicely with kp_vel=3000, ki_vel=800; also kp_vel=4000, ki_vel=800
+            kp_vel=[5000, 5600, 5300, 5000, 5000, 5000],
+            ki_vel=[400, 120, 120, 400, 300, 300],
+            # kp_vel=[5000, 5600, 5300, 5000, 5000, 5000],
+            # ki_vel=[350, 150, 150, 400, 250, 250],
             arm_name=arm_name,
             robot_type=robot_type,
         )

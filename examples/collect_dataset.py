@@ -2,14 +2,18 @@ import eagerx
 import eagerx_interbotix
 
 # Other
+import torch
 import yaml
 import gym.wrappers as w
 import stable_baselines3 as sb
 import os
 import h5py
 import pathlib
+import numpy as np
+import random
+from datetime import datetime
 
-
+DEBUG = True
 NAME = "HER_force_torque_2022-10-13-1836"
 STEPS = 1_600_000
 MODEL_NAME = f"rl_model_{STEPS}_steps"
@@ -19,6 +23,23 @@ GRAPH_FILE = f"graph.yaml"
 
 if __name__ == "__main__":
     eagerx.set_log_level(eagerx.WARN)
+
+    episodes = 1
+    # Set seed
+    seed = 1
+    torch.use_deterministic_algorithms(True)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    date_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    dataset_size = 20000
+    batch_size = 32
+    epochs = 10
+    model_seed = seed + 1
+    model_split = 0.7
+    model_path = str(LOG_DIR / f"{date_time}" / f"{dataset_size}_{batch_size}_{epochs}_{model_split}_{model_seed}.tar")
+
 
     CAM_PATH = ROOT_DIR / "assets" / "calibrations"
     CAM_INTRINSICS = "logitech_c920.yaml"
@@ -49,12 +70,14 @@ if __name__ == "__main__":
     cam_render_shape = [image_height, image_width]
 
     # Create dataset file
-    f = h5py.File(LOG_DIR / f"dataset_{dataset_size}.hdf5", "w")
-    image_dataset = f.create_dataset("img", (dataset_size, image_height, image_width, 3), dtype="uint")
-    boxpos_dataset = f.create_dataset("box_pos", (dataset_size, 3), dtype="float")
-    boxyaw_dataset = f.create_dataset("box_yaw", (dataset_size, 1), dtype="float")
-    goalpos_dataset = f.create_dataset("goal_pos", (dataset_size, 3), dtype="float")
-    goalyaw_dataset = f.create_dataset("goal_yaw", (dataset_size, 1), dtype="float")
+    if not DEBUG:
+        data_file_path = str(LOG_DIR / "data" / f"dataset_{date_time}_{dataset_size}.hdf5")
+        f = h5py.File(data_file_path, "w")
+        image_dataset = f.create_dataset("img", (dataset_size, image_height, image_width, 3), dtype="uint")
+        boxpos_dataset = f.create_dataset("box_pos", (dataset_size, 3), dtype="float")
+        boxyaw_dataset = f.create_dataset("box_yaw", (dataset_size, 1), dtype="float")
+        goalpos_dataset = f.create_dataset("goal_pos", (dataset_size, 3), dtype="float")
+        goalyaw_dataset = f.create_dataset("goal_yaw", (dataset_size, 1), dtype="float")
 
     # Load graph
     graph = eagerx.Graph.load(f"{LOG_DIR}/{GRAPH_FILE}")
@@ -74,7 +97,6 @@ if __name__ == "__main__":
     solid.sensors.orientation.rate = 10
     solid.config.cam_intrinsics = cam_intrinsics
     solid.states.color.space.update(low=box_color_low, high=box_color_high)
-
 
     # Modify goal
     goal = graph.get_spec("goal")
@@ -108,6 +130,7 @@ if __name__ == "__main__":
         cam.states.pos.space.update(low=cam_translation_ov, high=cam_translation_ov)
         cam.states.orientation.space.update(low=cam_rotation_ov, high=cam_rotation_ov)
 
+        graph.connect(source=cam.sensors.image, observation="image")
 
         # Connect
         graph.render(source=cam.sensors.image, rate=render_rate, encoding="bgr")
@@ -118,8 +141,8 @@ if __name__ == "__main__":
     engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
 
     # Add surface
-    surfuce_urdf = ROOT_DIR / "eagerx_interbotix" / "solid" / "assets" / "surface.urdf"
-    engine.add_object("surface", urdf=str(surfuce_urdf), baseOrientation=[0, 0, 0, 1])
+    surface_urdf = ROOT_DIR / "eagerx_interbotix" / "solid" / "assets" / "surface.urdf"
+    engine.add_object("surface", urdf=str(surface_urdf), baseOrientation=[0, 0, 0, 1])
 
     # Make backend
     from eagerx.backends.single_process import SingleProcess
@@ -141,6 +164,7 @@ if __name__ == "__main__":
         add_bias=False,
         exclude_z=False,
         max_steps=int(T_max * rate),
+        seed=seed,
     )
     sb_env = GoalArmEnv(env, add_bias=False)
     sb_env = w.rescale_action.RescaleAction(sb_env, min_action=-1.0, max_action=1.0)
@@ -156,19 +180,21 @@ if __name__ == "__main__":
         eps += 1
         print(f"Episode: {eps}, data index: {data_i}")
         obs, done, frames = sb_env.reset(), False, []
-        while not done and data_i < dataset_size:
+        obs.pop("image")
+        while not done:
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, done, info = sb_env.step(action)
-            rgb = env.render("rgb_array")
+            rgb = obs.pop("image")
             if len(rgb.shape) > 0 and rgb.shape[0] > 0 and step % 2 == 0:
-                image_dataset[data_i] = rgb
-                boxpos_dataset[data_i] = obs["achieved_goal"][:-1]
-                boxyaw_dataset[data_i] = obs["achieved_goal"][-1]
-                goalpos_dataset[data_i] = obs["desired_goal"][:-1]
-                goalyaw_dataset[data_i] = obs["desired_goal"][-1]
+                if not DEBUG:
+                    image_dataset[data_i] = rgb
+                    boxpos_dataset[data_i] = obs["achieved_goal"][:-1]
+                    boxyaw_dataset[data_i] = obs["achieved_goal"][-1]
+                    goalpos_dataset[data_i] = obs["desired_goal"][:-1]
+                    goalyaw_dataset[data_i] = obs["desired_goal"][-1]
                 data_i += 1
             step += 1
         if not data_i < dataset_size:
             break
-
-    f.close()
+    if not DEBUG:
+        f.close()

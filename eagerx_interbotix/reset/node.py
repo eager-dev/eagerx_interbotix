@@ -6,7 +6,8 @@ from eagerx import Space
 from eagerx.core.specs import ResetNodeSpec
 import eagerx.core.register as register
 from eagerx.utils.utils import Msg
-from threading import get_ident
+import modern_robotics as mr
+
 
 status_map = {"Success": 1, "Timeout": 2, "Collision": 3}
 
@@ -116,11 +117,14 @@ class MoveUp(eagerx.ResetNode):
         cls,
         name: str,
         rate: float,
+        Slist: List[List[float]],
+        M: List[List[float]],
+        target_pos: List[float],
         timeout: float = 5.0,
         pos_threshold: float = 0.05,
         ori_threshold: float = 0.25,
-        pos_gain: float = 1.,
-        ori_gain: float = 1.,
+        pos_gain: float = 1.0,
+        ori_gain: float = 1.0,
         process: int = eagerx.NEW_PROCESS,
         color: str = "grey",
     ) -> ResetNodeSpec:
@@ -128,6 +132,10 @@ class MoveUp(eagerx.ResetNode):
 
         :param name: Node name
         :param rate: Rate at which callback is called.
+        :param Slist: Screw axes in the space frame when the manipulator is at the home position, in the format of a matrix
+                        with the screw axes as the columns.
+        :param M: The home configuration of the end-effector.
+        :param target_pos: Target joint positions.
         :param timeout: Seconds before considering the reset to be finished, regardless of the closeness. A value of `0` means
                         indefinite.
         :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
@@ -146,6 +154,9 @@ class MoveUp(eagerx.ResetNode):
         spec.config.outputs = ["dxyz", "dyaw"]
 
         # Add custom params
+        spec.config.Slist = Slist
+        spec.config.M = M
+        spec.config.target_pos = target_pos
         spec.config.pos_threshold = pos_threshold
         spec.config.ori_threshold = ori_threshold
         spec.config.pos_gain = pos_gain
@@ -159,6 +170,9 @@ class MoveUp(eagerx.ResetNode):
         self.ori_threshold = spec.config.ori_threshold
         self.pos_gain = spec.config.pos_gain
         self.ori_gain = spec.config.ori_gain
+        self.Slist = np.array(spec.config.Slist)
+        self.M = np.array(spec.config.M)
+        self.target_pos = np.array(spec.config.target_pos)
 
     @register.states()
     def reset(self):
@@ -177,11 +191,13 @@ class MoveUp(eagerx.ResetNode):
         rot_ee2b = R.from_quat(orn).as_matrix()
         rot_red_ee2b = rot_ee2b[:2, 1:]
         yaw = np.arctan2(rot_red_ee2b[1, 1], rot_red_ee2b[0, 1])
-        goal_xyz = np.array([0.3, 0, 0.2], dtype="float32")
+
+        transformation = mr.FKinSpace(self.M, self.Slist, self.target_pos)
+        goal_xyz = transformation[:3, 3]
 
         # Determine done flag
         dxyz = (goal_xyz - ee_position) * self.pos_gain
-        dyaw = - yaw * self.ori_gain
+        dyaw = -yaw * self.ori_gain
         is_done = False
         if np.isclose(ee_position, goal_xyz, atol=self.pos_threshold).all() and np.isclose(yaw, 0, atol=self.ori_threshold):
             dxyz *= 0
@@ -193,6 +209,6 @@ class MoveUp(eagerx.ResetNode):
             is_done = True
 
         # Create output message
-        output_msgs = dict(dxyz=dxyz, dyaw=dyaw)
+        output_msgs = dict(dxyz=np.asarray(dxyz, dtype="float32"), dyaw=np.asarray(dyaw, dtype="float32"))
         output_msgs["velocity/done"] = is_done
         return output_msgs

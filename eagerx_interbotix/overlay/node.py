@@ -70,7 +70,7 @@ class Overlay(eagerx.Node):
         cam_rotation = R.from_quat(cam_rotation).as_matrix().transpose()
         homogeneous_matrix = np.eye(4)
         homogeneous_matrix[:3, :3] = cam_rotation
-        homogeneous_matrix[:3, 3] = - cam_rotation @ cam_translation
+        homogeneous_matrix[:3, 3] = -cam_rotation @ cam_translation
         self.homogeneous_matrix = homogeneous_matrix
         self.ratio = spec.config.ratio
         self.h, self.w = spec.config.resolution
@@ -99,7 +99,12 @@ class Overlay(eagerx.Node):
     def reset(self):
         pass
 
-    @register.inputs(main=Space(dtype="uint8"), thumbnail=Space(dtype="uint8"), goal_pos=Space(dtype="float32"), goal_ori=Space(dtype="float32"))
+    @register.inputs(
+        main=Space(dtype="uint8"),
+        thumbnail=Space(dtype="uint8"),
+        goal_pos=Space(dtype="float32"),
+        goal_ori=Space(dtype="float32"),
+    )
     @register.outputs(image=Space(dtype="uint8"))
     def callback(self, t_n: float, main: Msg, thumbnail: Msg, goal_pos: Msg, goal_ori: Msg):
         mn = main.msgs[-1]
@@ -110,24 +115,43 @@ class Overlay(eagerx.Node):
 
         # Draw goal frame
         if goal_pos is not None and goal_ori is not None:
-            # draw goal square
-            p1 = goal_pos + 1.2 * np.array([-0.05, -0.05, 0.0])
-            p2 = goal_pos + 1.2 * np.array([0.05, -0.05, 0.0])
-            p3 = goal_pos + 1.2 * np.array([0.05, 0.05, 0.0])
-            p4 = goal_pos + 1.2 * np.array([-0.05, 0.05, 0.0])
-            p1 = self.homogeneous_matrix[:3, :3] @ p1 + self.homogeneous_matrix[:3, 3]
-            p2 = self.homogeneous_matrix[:3, :3] @ p2 + self.homogeneous_matrix[:3, 3]
-            p3 = self.homogeneous_matrix[:3, :3] @ p3 + self.homogeneous_matrix[:3, 3]
-            p4 = self.homogeneous_matrix[:3, :3] @ p4 + self.homogeneous_matrix[:3, 3]
+            # # draw goal square
+            # p1 = goal_pos + 1.2 * np.array([-0.05, -0.05, 0.0])
+            # p2 = goal_pos + 1.2 * np.array([0.05, -0.05, 0.0])
+            # p3 = goal_pos + 1.2 * np.array([0.05, 0.05, 0.0])
+            # p4 = goal_pos + 1.2 * np.array([-0.05, 0.05, 0.0])
+            # p1 = self.homogeneous_matrix[:3, :3] @ p1 + self.homogeneous_matrix[:3, 3]
+            # p2 = self.homogeneous_matrix[:3, :3] @ p2 + self.homogeneous_matrix[:3, 3]
+            # p3 = self.homogeneous_matrix[:3, :3] @ p3 + self.homogeneous_matrix[:3, 3]
+            # p4 = self.homogeneous_matrix[:3, :3] @ p4 + self.homogeneous_matrix[:3, 3]
+            #
+            # p1 = cv2.projectPoints(p1.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
+            # p2 = cv2.projectPoints(p2.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
+            # p3 = cv2.projectPoints(p3.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
+            # p4 = cv2.projectPoints(p4.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
+            # cv2.line(mn, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
+            # cv2.line(mn, (int(p2[0]), int(p2[1])), (int(p3[0]), int(p3[1])), (0, 255, 0), 2)
+            # cv2.line(mn, (int(p3[0]), int(p3[1])), (int(p4[0]), int(p4[1])), (0, 255, 0), 2)
+            # cv2.line(mn, (int(p4[0]), int(p4[1])), (int(p1[0]), int(p1[1])), (0, 255, 0), 2)
 
-            p1 = cv2.projectPoints(p1.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            p2 = cv2.projectPoints(p2.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            p3 = cv2.projectPoints(p3.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            p4 = cv2.projectPoints(p4.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            cv2.line(mn, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
-            cv2.line(mn, (int(p2[0]), int(p2[1])), (int(p3[0]), int(p3[1])), (0, 255, 0), 2)
-            cv2.line(mn, (int(p3[0]), int(p3[1])), (int(p4[0]), int(p4[1])), (0, 255, 0), 2)
-            cv2.line(mn, (int(p4[0]), int(p4[1])), (int(p1[0]), int(p1[1])), (0, 255, 0), 2)
+            # draw points in circle with radius 0.05 * sqrt(2)
+            mn = np.ascontiguousarray(mn)
+            goal_pos = goal_pos.reshape((3, 1))
+            p = goal_pos + np.sqrt(2) * 0.05 * np.array(
+                [np.cos(np.linspace(0, 2 * np.pi, 100)), np.sin(np.linspace(0, 2 * np.pi, 100)), np.zeros(100)]
+            )
+            p = self.homogeneous_matrix[:3, :3] @ p + self.homogeneous_matrix[:3, 3].reshape((3, 1))
+            p = cv2.projectPoints(p.T, np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0].reshape(
+                -1, 2
+            )
+            for i in range(p.shape[0]):
+                cv2.line(
+                    mn,
+                    (int(p[i, 0]), int(p[i, 1])),
+                    (int(p[(i + 1) % p.shape[0], 0]), int(p[(i + 1) % p.shape[0], 1])),
+                    (0, 255, 0),
+                    2,
+                )
 
         # Resize main
         mn_PIL = PIL.Image.fromarray(mn).convert("RGB")

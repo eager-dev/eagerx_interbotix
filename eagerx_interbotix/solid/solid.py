@@ -21,7 +21,7 @@ class Solid(Object):
         orientation=Space(low=[0, 0, -1, -1], high=[0, 0, 1, 1], dtype="float32"),
         angular_vel=Space(low=[0, 0, 0], high=[0, 0, 0], dtype="float32"),
         lateral_friction=Space(low=0.1, high=0.5, shape=(), dtype="float32"),
-        color=Space(low=[0, 0, 0, 1], high=[1, 1, 1, 1], shape=(4,), dtype="float32")
+        # color=Space(low=[0, 0, 0, 1], high=[1, 1, 1, 1], shape=(4,), dtype="float32")
     )
     def make(
         cls,
@@ -79,14 +79,15 @@ class Solid(Object):
 
         # Create engine_states (no agnostic states defined in this case)
         from eagerx_pybullet.enginestates import LinkState, PbDynamics
-        from eagerx_interbotix.xseries.pybullet.enginestates import LinkColorState
+
+        # from eagerx_interbotix.xseries.pybullet.enginestates import LinkColorState
 
         spec.engine.states.position = LinkState.make(mode="position")
         spec.engine.states.velocity = LinkState.make(mode="velocity")
         spec.engine.states.orientation = LinkState.make(mode="orientation")
         spec.engine.states.angular_vel = LinkState.make(mode="angular_vel")
         spec.engine.states.lateral_friction = PbDynamics.make(parameter="lateralFriction")
-        spec.engine.states.color = LinkColorState.make()
+        # spec.engine.states.color = LinkColorState.make()
 
         # Create sensor engine nodes
         from eagerx_pybullet.enginenodes import LinkSensor, CameraSensor

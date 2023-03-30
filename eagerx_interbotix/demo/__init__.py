@@ -159,6 +159,7 @@ class PandaIK:
         )
         return spec
 
+
 class BoxPushEnv:
     @staticmethod
     def make(name, rate, graph, engine, backend):
@@ -178,8 +179,3 @@ class BoxPushEnv:
         goal_env = GoalArmEnv(env)
         env = w.rescale_action.RescaleAction(goal_env, min_action=-1.0, max_action=1.0)
         return env
-
-
-
-
-

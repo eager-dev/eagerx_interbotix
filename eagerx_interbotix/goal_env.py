@@ -5,35 +5,44 @@ from eagerx import BaseEnv
 
 
 class GoalArmEnv(gym.Wrapper):
-    def __init__(self, env: BaseEnv, add_bias: bool = False):
+    def __init__(self, env: BaseEnv, add_bias: bool = False, ori_rwd: bool = True):
         super().__init__(env)
         self._add_bias = add_bias
         self._env = env
+        self._ori_rwd = ori_rwd
         flattened_space = spaces.Dict()
         space = dict(self._env.observation_space)
         if "force_torque" in space:
             space.pop("force_torque")
         if "image" in space:
             space.pop("image")
+
         self._og_des_pos_space = space.pop("pos_desired")
         flat_des_pos_space = spaces.flatten_space(self._og_des_pos_space)
-        self._og_des_yaw_space = space.pop("yaw_desired")
-        flat_des_yaw_space = spaces.flatten_space(self._og_des_yaw_space)
-        self._og_desired_goal_space = spaces.Box(
-            low=np.concatenate([flat_des_pos_space.low, flat_des_yaw_space.low]),
-            high=np.concatenate([flat_des_pos_space.high, flat_des_yaw_space.high]),
-        )
+        if "yaw_desired" in space:
+            self._og_des_yaw_space = space.pop("yaw_desired")
+            flat_des_yaw_space = spaces.flatten_space(self._og_des_yaw_space)
+            self._og_desired_goal_space = spaces.Box(
+                low=np.concatenate([flat_des_pos_space.low, flat_des_yaw_space.low]),
+                high=np.concatenate([flat_des_pos_space.high, flat_des_yaw_space.high]),
+            )
+        else:
+            self._og_desired_goal_space = self._og_des_pos_space
 
         self._og_observation_space = spaces.Dict(space)
 
         self._og_achieved_pos_space = space["pos"]
         flat_achieved_pos_space = spaces.flatten_space(self._og_achieved_pos_space)
-        self._og_achieved_yaw_space = space["yaw"]
-        flat_achieved_yaw_space = spaces.flatten_space(self._og_achieved_yaw_space)
-        self._og_achieved_goal_space = spaces.Box(
-            low=np.concatenate([flat_achieved_pos_space.low, flat_achieved_yaw_space.low]),
-            high=np.concatenate([flat_achieved_pos_space.high, flat_achieved_yaw_space.high]),
-        )
+        if "yaw_desired" in space:
+
+            self._og_achieved_yaw_space = space["yaw"]
+            flat_achieved_yaw_space = spaces.flatten_space(self._og_achieved_yaw_space)
+            self._og_achieved_goal_space = spaces.Box(
+                low=np.concatenate([flat_achieved_pos_space.low, flat_achieved_yaw_space.low]),
+                high=np.concatenate([flat_achieved_pos_space.high, flat_achieved_yaw_space.high]),
+            )
+        else:
+            self._og_achieved_goal_space = self._og_achieved_pos_space
 
         flattened_space["desired_goal"] = spaces.flatten_space(self._og_desired_goal_space)
         flattened_space["observation"] = spaces.flatten_space(self._og_observation_space)
@@ -51,16 +60,23 @@ class GoalArmEnv(gym.Wrapper):
         if "image" in obs:
             goal_obs["image"] = obs.pop("image")
         flat_des_pos = spaces.flatten(self._og_des_pos_space, obs.pop("pos_desired"))
-        flat_des_yaw = spaces.flatten(self._og_des_yaw_space, obs.pop("yaw_desired"))
-
-        goal_obs["desired_goal"] = spaces.flatten(self._og_desired_goal_space, np.concatenate([flat_des_pos, flat_des_yaw]))
+        if "yaw_desired" in obs:
+            flat_des_yaw = spaces.flatten(self._og_des_yaw_space, obs.pop("yaw_desired"))
+            goal_obs["desired_goal"] = spaces.flatten(
+                self._og_desired_goal_space, np.concatenate([flat_des_pos, flat_des_yaw])
+            )
+        else:
+            goal_obs["desired_goal"] = flat_des_pos
 
         flat_achieved_pos = spaces.flatten(self._og_achieved_pos_space, obs["pos"])
-        flat_achieved_yaw = spaces.flatten(self._og_achieved_yaw_space, obs["yaw"])
+        if "yaw_desired" in obs:
+            flat_achieved_yaw = spaces.flatten(self._og_achieved_yaw_space, obs["yaw"])
+            goal_obs["achieved_goal"] = spaces.flatten(
+                self._og_achieved_goal_space, np.concatenate([flat_achieved_pos, flat_achieved_yaw])
+            )
+        else:
+            goal_obs["achieved_goal"] = flat_achieved_pos
 
-        goal_obs["achieved_goal"] = spaces.flatten(
-            self._og_achieved_goal_space, np.concatenate([flat_achieved_pos, flat_achieved_yaw])
-        )
         # Simulate bias in observations.
         if self._add_bias:
             obs["pos"] = obs["pos"] + self.solid_bias
@@ -93,23 +109,32 @@ class GoalArmEnv(gym.Wrapper):
 
     def compute_reward(self, achieved_goal, desired_goal, info):
         pos_desired = desired_goal[:, :2]
-        yaw_desired = desired_goal[:, -1]
         pos = achieved_goal[:, :2]
-        yaw = achieved_goal[:, -1]
-
-        # Penalize distance of the object to the pos_desired
-        yaw_error = np.min(
-            np.vstack(
-                [np.abs(yaw_desired - yaw), np.abs(yaw_desired - 0.5 * np.pi - yaw), np.abs(yaw_desired + 0.5 * np.pi - yaw)]
-            ),
-            axis=0,
-        )
         dist = pos_desired - pos
         pos_error = np.linalg.norm(dist.reshape(-1, 2), axis=1)
-        rwd_dist = -4.0 * pos_error - (yaw_error / (1 + 10 * pos_error)) ** 2
+        if "yaw_desired" in dict(self._env.observation_space):
+            yaw_desired = desired_goal[:, -1]
+            yaw = achieved_goal[:, -1]
+            # Penalize distance of the object to the pos_desired
+            yaw_error = np.min(
+                np.vstack(
+                    [
+                        np.abs(yaw_desired - yaw),
+                        np.abs(yaw_desired - 0.5 * np.pi - yaw),
+                        np.abs(yaw_desired + 0.5 * np.pi - yaw),
+                    ]
+                ),
+                axis=0,
+            )
+        else:
+            yaw_error = 0
+        ori_rwd = -((yaw_error / (1 + 10 * pos_error)) ** 2)
+        rwd_dist = -4.0 * pos_error
         # Add goal independent rewards
         rwd_goal_independent = np.asarray([i["rwd_goal_independent"] for i in info])
         rwd = rwd_dist + rwd_goal_independent
+        if self._ori_rwd:
+            rwd += ori_rwd
         out_of_reach = np.linalg.norm(achieved_goal[:, :2], axis=1) > 1.0
         rwd[out_of_reach] = -50
         return rwd

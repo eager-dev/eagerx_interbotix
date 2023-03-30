@@ -19,7 +19,7 @@ class Goal(Object):
     @register.engine_states(
         position=Space(low=[-1, -1, 0], high=[1, 1, 0], dtype="float32"),
         orientation=Space(low=[0, 0, -1, -1], high=[0, 0, 1, 1], dtype="float32"),
-        color=Space(low=[0, 0, 0, 1], high=[1, 1, 1, 1], dtype="float32"),
+        # color=Space(low=[0, 0, 0, 1], high=[1, 1, 1, 1], dtype="float32"),
     )
     def make(
         cls,
@@ -63,12 +63,13 @@ class Goal(Object):
 
         # Create engine_states (no agnostic states defined in this case)
         from eagerx_pybullet.enginestates import LinkState
+
         # from eagerx_interbotix.solid.pybullet.enginestates import TextureState
-        from eagerx_interbotix.xseries.pybullet.enginestates import LinkColorState
+        # from eagerx_interbotix.xseries.pybullet.enginestates import LinkColorState
 
         spec.engine.states.position = LinkState.make(mode="position")
         spec.engine.states.orientation = LinkState.make(mode="orientation")
-        spec.engine.states.color = LinkColorState.make()
+        # spec.engine.states.color = LinkColorState.make()
         # texture_path = str(Path(__file__).parent / "assets" / "rect2.png")
         # spec.engine.states.color = TextureState.make(texture_path=texture_path)
 

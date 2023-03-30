@@ -8,6 +8,7 @@ import eagerx.core.register as register
 
 from typing import List
 
+
 class Camera(eagerx.Object):
     @classmethod
     @register.sensors(
@@ -38,8 +39,8 @@ class Camera(eagerx.Object):
         fov: float = 45.0,
         near_val: float = 0.1,
         far_val: float = 10.0,
-        light_direction_low = None,
-        light_direction_high = None,
+        light_direction_low=None,
+        light_direction_high=None,
     ) -> ObjectSpec:
         """Make a spec to initialize a camera.
 

@@ -139,14 +139,6 @@ if __name__ == "__main__":
     cam_rotation_ov = [-0.6830127, -0.6830127, 0.1830127, 0.1830127]  # todo: set correct cam overview location
     cam_render_shape = [image_height, image_width]
 
-    # Create dataset file
-    f = h5py.File(LOG_DIR / f"dataset_{dataset_size}.hdf5", "w")
-    image_dataset = f.create_dataset("img", (dataset_size, image_height, image_width, 3), dtype="uint")
-    boxpos_dataset = f.create_dataset("box_pos", (dataset_size, 3), dtype="float")
-    boxyaw_dataset = f.create_dataset("box_yaw", (dataset_size, 1), dtype="float")
-    goalpos_dataset = f.create_dataset("goal_pos", (dataset_size, 3), dtype="float")
-    goalyaw_dataset = f.create_dataset("goal_yaw", (dataset_size, 1), dtype="float")
-
     # Load graph
     graph = eagerx.Graph.load(f"{LOG_DIR}/{GRAPH_FILE}")
 

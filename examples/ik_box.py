@@ -234,6 +234,8 @@ if __name__ == "__main__":
         graph.connect(source=cam.sensors.image, target=overlay.inputs.thumbnail)
         graph.render(source=overlay.outputs.image, rate=20, encoding="bgr")
 
+    graph.gui()
+
     # Define environment
     from eagerx_interbotix.env import ArmEnv
     from eagerx_interbotix.goal_env import GoalArmEnv

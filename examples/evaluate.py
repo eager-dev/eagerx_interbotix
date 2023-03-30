@@ -26,6 +26,13 @@ if __name__ == "__main__":
     graph = eagerx.Graph.load(f"{LOG_DIR}/{GRAPH_FILE}")
     graph.gui()
 
+    # Modify goal
+    goal = graph.get_spec("goal")
+    x, y, z = 0.30, 0.0, 0.05
+    dx, dy = 0.1, 0.20
+    goal.states.orientation.space.update(low=[-1, -1, 0, 0], high=[1, 1, 0, 0])
+    goal.states.position.space.update(low=[x, -y - dy, 0], high=[x + dx, y + dy, 0])
+
     from eagerx_pybullet.engine import PybulletEngine
 
     engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0)
@@ -34,6 +41,7 @@ if __name__ == "__main__":
     from eagerx.backends.single_process import SingleProcess
 
     backend = SingleProcess.make()
+
 
     # Define environment
     from eagerx_interbotix.env import ArmEnv

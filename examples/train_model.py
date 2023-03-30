@@ -116,7 +116,7 @@ if __name__ == "__main__":
     date_time = datetime.now().strftime("%Y-%m-%d_%H-%M")
     log_dir = str(LOG_DIR / f"{date_time}" / f"{dataset_size}_{batch_size}_{epochs}_{split}_{seed}")
     writer = SummaryWriter(log_dir)
-    file_path = str(LOG_DIR / f"dataset_{dataset_size}.hdf5")
+    data_file_path = str(LOG_DIR / "data" / f"dataset_{date_time}_{dataset_size}.hdf5")
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
     # Initialize Dataset and Dataloaders
     dataset = H5Dataset(
-        file_path,
+        data_file_path,
         transform=input_transforms,
         target_mean=target_mean,
         target_std=target_std,

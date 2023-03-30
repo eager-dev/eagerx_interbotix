@@ -33,8 +33,10 @@ if __name__ == "__main__":
     # cam_translation_ov = [1.0, 0, 1.0]  # todo: set correct cam overview location
     # cam_rotation_ov = [-0.6830127, -0.6830127, 0.1830127, 0.1830127]  # todo: set correct cam overview location
     # cam_rotation_ov = [-0.6963643, -0.6963642, 0.1227878, 0.1227878]
-    cam_translation_ov = [1.5*0.811, 2*0.527, 2*0.43]
+    cam_translation_ov = [1.25*0.811, 1.5*0.527, 1.5*0.43]
     cam_rotation_ov = [0.321, 0.801, -0.466, -0.197]
+    # cam_translation_ov = [0.8, 0, 0.8]  # todo: set correct cam overview location
+    # cam_rotation_ov = [-0.6830127, -0.6830127, 0.1830127, 0.1830127]  # todo: set correct cam overview location
 
 
     sync = True
@@ -43,6 +45,14 @@ if __name__ == "__main__":
     rate = 10
     render_rate = rate
     safe_rate = 10
+    light_direction_low = [-50, -50, 0]
+    light_direction_high = [50, 50, 50]
+    robot_color_low = [0, 0, 0, 1]
+    robot_color_high = [0.2, 0.2, 0.2, 1]
+    box_color_low = [0.9*1, 0.9*0.388, 0.9*0.278, 1]
+    box_color_high = [1, 1.1*0.388, 1.1*0.278, 1]
+    goal_color_low = [0.9*0.278, 0.9*1, 0.9*0.388, 1]
+    goal_color_high = [1.1*0.278, 1, 1.1*0.388, 1]
 
     # Load graph
     graph = eagerx.Graph.load(f"{LOG_DIR}/{GRAPH_FILE}")
@@ -51,12 +61,13 @@ if __name__ == "__main__":
     safe = graph.get_spec("safety")
     safe.config.collision.workspace = "eagerx_interbotix.safety.workspaces/exclude_ground"
 
-    # Modify aruco rate
+    # Set color robot
+    vx300s = graph.get_spec("vx300s")
+    vx300s.states.color.space.update(low=robot_color_low, high=robot_color_high)
+
+    # Modify box state
     solid = graph.get_spec("solid")
-    solid.sensors.robot_view.rate = 10
-    solid.sensors.position.rate = 10
-    solid.sensors.orientation.rate = 10
-    solid.config.cam_intrinsics = cam_intrinsics
+    solid.states.color.space.update(low=box_color_low, high=box_color_high)
 
     # Modify goal
     goal = graph.get_spec("goal")
@@ -66,6 +77,7 @@ if __name__ == "__main__":
     solid.states.position.space.update(low=[x, -y - dy, z], high=[x + dx, y + dy, z])
     goal.states.orientation.space.update(low=[-1, -1, 0, 0], high=[1, 1, 0, 0])
     goal.states.position.space.update(low=[x, -y - dy, 0], high=[x + dx, y + dy, 0])
+    goal.states.color.space.update(low=goal_color_low, high=goal_color_high)
 
     # Add rendering
     if must_render:
@@ -82,6 +94,8 @@ if __name__ == "__main__":
             camera_index=cam_index_ov,
             fov=45.0,
             render_shape=[1080, 1080],
+            light_direction_low=light_direction_low,
+            light_direction_high=light_direction_high,
         )
         graph.add(cam)
         cam.states.pos.space.update(low=cam_translation_ov, high=cam_translation_ov)
@@ -93,6 +107,10 @@ if __name__ == "__main__":
     from eagerx_pybullet.engine import PybulletEngine
 
     engine = PybulletEngine.make(rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+
+    # Add surface
+    surface_urdf = ROOT_DIR / "eagerx_interbotix" / "solid" / "assets" / "surface.urdf"
+    engine.add_object("surface", urdf=str(surface_urdf), baseOrientation=[0, 0, 0, 1])
 
     # backend = Ros1.make()
     from eagerx.backends.single_process import SingleProcess
@@ -133,6 +151,6 @@ if __name__ == "__main__":
             obs, reward, done, info = sb_env.step(action)
             video_buffer.append(env.render("rgb_array"))
     clip = ImageSequenceClip(video_buffer, fps=25)
-    clip.write_videofile(str(LOG_DIR / "recording.mp4"), fps=25)
+    clip.write_videofile(str(LOG_DIR / "recording_opendr.mp4"), fps=25)
     clip.close()
 

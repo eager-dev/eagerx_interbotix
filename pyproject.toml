@@ -21,6 +21,8 @@ xacro = "^1.13.3"
 stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
 opencv-contrib-python = "^4.6.0"
 h5py = "^3.7.0"
+torch = {version = "^1.10.2", source = "torch"}
+torchvision = {version = "^0.11.3", source = "torch"}
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
@@ -29,6 +31,11 @@ pytest-cov = "^3.0.0"
 pytest-timeout = "^2.1.0"
 flake8= ">=3"
 flake8-bugbear = "^22.3.23"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/cu113"
+secondary = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -33,6 +33,7 @@ class Xseries(eagerx.Object):
         cls,
         name: str,
         robot_type: str,
+        arm_name: str = None,
         sensors=None,
         actuators=None,
         states=None,
@@ -88,6 +89,7 @@ class Xseries(eagerx.Object):
 
         # Add registered config params
         spec.config.robot_type = robot_type
+        spec.config.arm_name = arm_name if arm_name else robot_type
         spec.config.joint_names = joint_names
         spec.config.gripper_names = gripper_names
         spec.config.gripper_link = gripper_link
@@ -236,13 +238,18 @@ class Xseries(eagerx.Object):
         from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
 
         joints = spec.config.joint_names
+        robot_type = spec.config.robot_type
+        arm_name = spec.config.arm_name
+
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
-        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position")
-        ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position")
-        ee_orn_sensor = XseriesSensor.make(
-            "ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation"
-        )
-        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity")
+        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position",
+                                        arm_name=arm_name, robot_type=robot_type)
+        ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position",
+                                           arm_name=arm_name, robot_type=robot_type)
+        ee_orn_sensor = XseriesSensor.make("ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation",
+                                           arm_name=arm_name, robot_type=robot_type)
+        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity",
+                                        arm_name=arm_name, robot_type=robot_type)
 
         # Create actuator engine nodes
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
@@ -256,6 +263,8 @@ class Xseries(eagerx.Object):
             profile_velocity=131,
             kp_pos=800,
             kd_pos=1000,
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
         vel_control = XseriesArm.make(
             "vel_control",
@@ -269,8 +278,10 @@ class Xseries(eagerx.Object):
             kd_pos=800,
             kp_vel=1900,
             ki_vel=500,
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
-        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate)
+        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate, arm_name=arm_name, robot_type=robot_type)
 
         # Connect all engine nodes
         graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])

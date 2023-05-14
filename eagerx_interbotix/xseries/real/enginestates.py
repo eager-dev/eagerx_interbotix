@@ -21,7 +21,7 @@ class CopilotStateReset(eagerx.EngineState):
     @classmethod
     def make(cls, arm_name: str, robot_type: str):
         spec = cls.get_specification()
-        spec.update(arm_name=arm_name, robot_type=robot_type)
+        spec.config.update(arm_name=arm_name, robot_type=robot_type)
         return spec
 
     def initialize(self, spec: EngineStateSpec, simulator: Any):

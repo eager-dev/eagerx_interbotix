@@ -80,7 +80,7 @@ def velocity_control(_graph, _arm, source_goal, safe_rate):
     return safe
 
 
-NAME = "IK_10hz_circle_yaw_kn"
+NAME = "IK_jelle"
 LOG_DIR = os.path.dirname(eagerx_interbotix.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # todo: reduce bias
     # todo: increase offset in rwd_near (to account for the gripper length)?
     # todo: Penalize box flipping?
-    n_procs = 4
+    n_procs = 2
     rate = 10  # 20
     safe_rate = 20
     T_max = 10.0  # [sec]
@@ -303,9 +303,11 @@ if __name__ == "__main__":
         for eps in range(5000):
             print(f"Episode {eps}")
             _, done = train_env.reset(), False
-            while not done:
+            done = np.array([done], dtype="bool") if isinstance(done, bool) else done
+            while not done.all():
                 action = train_env.action_space.sample()
                 obs, reward, done, info = train_env.step(action)
+                done = np.array([done], dtype="bool") if isinstance(done, bool) else done
 
     # Create experiment directory
     total_steps = 1_600_000

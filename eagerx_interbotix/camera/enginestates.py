@@ -1,6 +1,6 @@
-from typing import Any
-from eagerx.core.specs import EngineStateSpec
 import eagerx
+from eagerx.core.specs import EngineStateSpec
+from typing import Any
 
 
 class DummyState(eagerx.EngineState):

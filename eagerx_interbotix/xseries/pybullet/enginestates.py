@@ -1,5 +1,5 @@
 import eagerx
-from typing import Any
+from typing import Any, Dict
 from eagerx.core.specs import EngineStateSpec
 import pybullet
 
@@ -63,3 +63,58 @@ class PbXseriesGripper(eagerx.EngineState):
                 )
 
         return cb
+
+
+class LinkColorState(eagerx.EngineState):
+    @classmethod
+    def make(cls) -> EngineStateSpec:
+        """A spec to create an EngineState that resets a specified link to the desired color.
+        :return: EngineStateSpec
+        """
+        spec = cls.get_specification()
+        return spec
+
+    def initialize(self, spec: EngineStateSpec, simulator: Dict):
+        """Initializes the engine state according to the spec."""
+        self.robot = simulator["object"]
+        self._p = simulator["client"]
+        self.physics_client_id = self._p._client
+        self.bodyUniqueId = self.robot.robot_objectid
+        self.base_cb = self._link_color_reset(self._p, self.robot.parts, self.bodyUniqueId[0])
+
+    def reset(self, state):
+        """Resets the link state to the desired value."""
+        self.base_cb(state.tolist())
+
+    @staticmethod
+    def _link_color_reset(p, parts, bodyUniqueId):
+        def cb(state):
+            for _pb_name, part in parts.items():
+                bodyid, linkindex = part.get_bodyid_linkindex()
+                p.changeVisualShape(bodyUniqueId, linkIndex=linkindex, rgbaColor=state)
+
+        return cb
+
+
+class TextureState(eagerx.EngineState):
+    @classmethod
+    def make(cls, texture_path) -> EngineStateSpec:
+        """A spec to create an EngineState that resets a specified link to the desired color.
+        :return: EngineStateSpec
+        """
+        spec = cls.get_specification()
+        spec.config.update(texture_path=texture_path)
+        return spec
+
+    def initialize(self, spec: EngineStateSpec, simulator: Dict):
+        """Initializes the engine state according to the spec."""
+        self.robot = simulator["object"]
+        p = simulator["client"]
+        x = p.loadTexture(spec.config.texture_path)
+        for _pb_name, part in self.robot.parts.items():
+            bodyid, linkindex = part.get_bodyid_linkindex()
+            p.changeVisualShape(self.robot.robot_objectid[0], linkIndex=linkindex, textureUniqueId=x)
+
+    def reset(self, state):
+        """Resets the link state to the desired value."""
+        pass

@@ -1,0 +1,53 @@
+train:
+  device: cuda:0
+  repetition: 0
+  cluster: False
+  gui: False
+  keep_models: True
+  keep_buffers: True
+  pos_control: False
+  excl_z: False
+  add_bias: True
+  t_max: 10
+  rate: 10
+  safe_rate: 20
+  total_timesteps: 3_000_000
+  save_freq: 250_000
+  vel_limit: 0.5
+  box_position_low: [0.3, -0.2, 0.05]
+  box_position_high: [0.4, 0.2, 0.05]
+  box_orientation_low: [-1., -1., 0., 0.]
+  box_orientation_high: [1., 1., 0., 0.]
+  goal_position_low: [0.3, -0.2, 0.0]
+  goal_position_high: [0.4, 0.2, 0.0]
+  goal_orientation_low: [-1., -1., 0., 0.]
+  goal_orientation_high: [1., 1., 0., 0.]
+  use_ros: True
+
+settings:
+  baseline_no_ik:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.25
+    friction_high: 0.25
+    ik: False
+    name: PyBullet
+  friction_no_ik:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.1
+    friction_high: 0.4
+    ik: False
+    name: PyBullet + DR
+  baseline:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.25
+    friction_high: 0.25
+    name: PyBullet + IK
+  friction:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.1
+    friction_high: 0.4
+    name: PyBullet + IK DR

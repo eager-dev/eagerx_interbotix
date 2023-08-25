@@ -22,8 +22,11 @@
       <geometry>
 		  <box size="0.1 0.1 0.1"/>
       </geometry>
-       <material name="red">
-        <color rgba="1 0.388 0.278 1"/>
+<!--       <material name="red">-->
+<!--        <color rgba="1 0.388 0.278 1"/>-->
+<!--      </material>-->
+      <material name="white">
+        <color rgba="0.85 0.85 0.85 1"/>
       </material>
     </visual>
     <collision>

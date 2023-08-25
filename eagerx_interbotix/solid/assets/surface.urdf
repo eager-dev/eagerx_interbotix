@@ -3,12 +3,12 @@
 
   <link name="baseLink">
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 -0.0047"/>
       <geometry>
-		  <box size="0.15 0.15 0.005"/>
+		  <box size="5.0 5.0 0.01"/>
       </geometry>
-       <material name="green">
-        <color rgba="0.278 1 0.388 1"/>
+       <material name="red">
+        <color rgba="1 1 1 1"/>
       </material>
     </visual>
   </link>

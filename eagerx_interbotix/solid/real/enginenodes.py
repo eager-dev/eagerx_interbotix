@@ -56,6 +56,54 @@ class GoalObservationSensor(eagerx.EngineNode):
         pass
 
 
+class YawGoalObservationSensor(eagerx.EngineNode):
+    @classmethod
+    def make(
+        cls,
+        name: str,
+        rate: float,
+        color: str = "cyan",
+    ) -> NodeSpec:
+        """Make the parameter specification for an Goal observation sensor.
+
+        :param name: Node name.
+        :param rate: Rate of the node [Hz].
+        :param color: Color of logged messages.
+        :return: Parameter specification.
+        """
+        spec = cls.get_specification()
+
+        # Modify default node params
+        spec.config.update(name=name, rate=rate, process=eagerx.ENGINE, color=color)
+        spec.config.inputs = ["tick"]
+        spec.config.outputs = ["obs"]
+
+        # Set parameters, defined by the signature of cls.initialize(...)
+        spec.config.mode = "orientation"
+        return spec
+
+    def initialize(self, spec: NodeSpec, simulator: Any):
+        self.mode = spec.config.mode
+        self.simulator = simulator
+
+    @register.states()
+    def reset(self):
+        pass
+
+    @register.inputs(tick=Space(shape=(), dtype="int64"))
+    @register.outputs(obs=Space(dtype="float32"))
+    def callback(self, t_n: float, tick: Msg):
+        # Get measurement of joint state
+        orn = self.simulator[self.mode]
+        rot = R.from_quat(orn)
+        yaw = rot.as_euler("zyx", degrees=True)[0]
+        yaw = yaw % (np.pi / 2)
+        return dict(obs=np.asarray([yaw], dtype="float32"))
+
+    def close(self):
+        pass
+
+
 class PoseDetector(eagerx.EngineNode):
     @classmethod
     def make(

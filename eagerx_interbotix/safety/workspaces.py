@@ -92,7 +92,7 @@ def exclude_ground_minus_25mm(client_id):
     # ground plane
     ground_id = pyb.loadURDF(
         "plane.urdf",
-        [0, 0, -2],
+        [0, 0, -0.025],
         useFixedBase=True,
         physicsClientId=client_id,
     )

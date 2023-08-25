@@ -21,6 +21,7 @@ class ArmEnv(eagerx.BaseEnv):
         delay_min: float = None,
         delay_max: float = None,
         ori_rwd: bool = True,
+        eval: bool = False,
     ):
         super().__init__(name, rate, graph, engine, backend=backend, force_start=False)
         self.steps = 0
@@ -29,6 +30,8 @@ class ArmEnv(eagerx.BaseEnv):
         self._seed = seed
         self._delay_min = delay_min
         self._delay_max = delay_max
+        self._eval = eval
+        self._episode = 0
 
         # Exclude
         self._exclude_z = exclude_z
@@ -124,6 +127,9 @@ class ArmEnv(eagerx.BaseEnv):
         # Publish reward
         self._pub_rwd.publish(np.array([rwd, rwd_pos, rwd_or, rwd_ctrl, rwd_force, rwd_near], dtype="float32"))
 
+        if done:
+            self._episode += 1
+
         return obs, rwd, done, info
 
     def reset(self, states: t.Optional[t.Dict[str, np.ndarray]] = None):
@@ -140,6 +146,9 @@ class ArmEnv(eagerx.BaseEnv):
         # Sample new starting orientation (vary yaw)
         yaw = np.random.random(()) * np.pi / 2
 
+        if self._eval:
+            yaw = 0.0 if self._episode % 2 == 0 else np.pi / 2
+
         box_name = "solid"
         if "solid/orientation" in _states:
             _states["solid/orientation"] = R.from_euler("zyx", [yaw, 0.0, 0.0]).as_quat().astype("float32")
@@ -149,6 +158,13 @@ class ArmEnv(eagerx.BaseEnv):
 
         # Sample new starting state (at least 17 cm from goal)
         radius = 0.17
+
+        eval_positions = [
+            np.array([0.38, -0.15, 0.05], dtype="float32"),
+            np.array([0.35, -0.15, 0.05], dtype="float32"),
+            np.array([0.32, -0.15, 0.05], dtype="float32"),
+        ]
+
         while True:
             solid_pos = self._state_space[f"{box_name}/position"].sample()
             goal_pos = self._state_space["goal/position"].sample()
@@ -156,10 +172,6 @@ class ArmEnv(eagerx.BaseEnv):
                 _states[f"{box_name}/position"] = solid_pos
                 _states["goal/position"] = goal_pos
                 break
-
-        # Set initial position state
-        if "solid/aruco/position" in _states:
-            _states["solid/aruco/position"] = solid_pos
 
         # Overwrite with user provided states
         if states is not None:
@@ -178,6 +190,17 @@ class ArmEnv(eagerx.BaseEnv):
             else:
                 actuator_delay = np.random.random(()) * (self._delay_max - self._delay_min) + self._delay_min
                 _states["vx300s/vel_control/delay"] = np.array(actuator_delay, dtype="float32")
+
+        if self._eval:
+            solid_pos = eval_positions[self._episode % 3]
+            yaw = 0.0 if self._episode % 2 == 0 else np.pi / 4
+
+            _states[f"{box_name}/orientation"] = R.from_euler("zyx", [yaw, 0.0, 0.0]).as_quat().astype("float32")
+            _states[f"{box_name}/position"] = solid_pos
+
+        # Set initial position state
+        if f"{box_name}/aruco/position" in _states:
+            _states[f"{box_name}/aruco/position"] = _states[f"{box_name}/position"]
 
         # Perform reset
         obs = self._reset(_states)

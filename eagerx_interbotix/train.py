@@ -4,6 +4,7 @@ from eagerx_interbotix.env import ArmEnv
 from eagerx_interbotix.goal_env import GoalArmEnv
 
 # Common imports
+import torch
 import glob
 import os
 import yaml
@@ -16,9 +17,13 @@ from stable_baselines3.common.utils import set_random_seed
 import gym.wrappers as w
 
 
-
 def create_env(
-    cfg: Dict, repetition: int, time_step: int, graph: eagerx.Graph, engine: eagerx.specs.EngineSpec, backend: eagerx.specs.BackendSpec
+    cfg: Dict,
+    repetition: int,
+    time_step: int,
+    graph: eagerx.Graph,
+    engine: eagerx.specs.EngineSpec,
+    backend: eagerx.specs.BackendSpec,
 ):
     excl_z = cfg["train"]["excl_z"]
     add_bias = cfg["train"]["add_bias"]
@@ -72,11 +77,21 @@ if __name__ == "__main__":
     gui = cfg["train"]["gui"]
     keep_models = cfg["train"]["keep_models"]
     keep_buffers = cfg["train"]["keep_buffers"]
+    use_ros = cfg["train"]["use_ros"]
+    if "cuda" in device:
+        torch.cuda.set_device(device)
 
-    from eagerx.backends.single_process import SingleProcess
-    backend = SingleProcess.make()
+    if use_ros:
+        from eagerx.backends.ros1 import Ros1
+
+        backend = Ros1.make()
+    else:
+        from eagerx.backends.single_process import SingleProcess
+
+        backend = SingleProcess.make()
 
     from eagerx_pybullet.engine import PybulletEngine
+
     engine = PybulletEngine.make(rate=safe_rate, gui=gui, egl=False, sync=True, real_time_factor=0)
 
     for setting in cfg["settings"].keys():
@@ -88,7 +103,16 @@ if __name__ == "__main__":
         else:
             graph_file = root / "exps" / "train" / "graphs" / f"graph_{setting}.yaml"
         graph = eagerx.Graph.load(str(graph_file))
+        graph.gui()
 
+        if "safety_filter" in cfg["settings"][setting].keys() and not cfg["settings"][setting]["safety_filter"]:
+            # Remove safety filter
+            safe = graph.get_spec("safety")
+            graph.remove(safe)
+
+            ik = graph.get_spec("ik")
+            arm = graph.get_spec("vx300s")
+            graph.connect(source=ik.outputs.dtarget, target=arm.actuators.vel_control)
         # Check if log dir exists
         if os.path.exists(log_dir) and len(glob.glob(str(log_dir) + "/rl_model_*.zip")) > 0:
             # Get last model
@@ -105,10 +129,12 @@ if __name__ == "__main__":
             train_env = create_env(cfg, repetition, step, graph, engine, backend)
             model = sb.SAC.load(LOAD_DIR, env=train_env, tensorboard_log=str(log_dir), device=device)
             model.load_replay_buffer(LOAD_DIR + "_replay_buffer")
+            model.replay_buffer.device = device
         else:
             print("No model found, starting from scratch")
             LOAD_DIR = None
             step = 0
+            graph.gui()
             train_env = create_env(cfg, repetition, step, graph, engine, backend)
             model = sb.SAC(
                 "MultiInputPolicy",
@@ -141,7 +167,7 @@ if __name__ == "__main__":
             train_env = create_env(cfg, repetition, step, graph, engine, backend)
             del model
             LOAD_DIR = str(log_dir) + f"/rl_model_{step}_steps"
-            model = sb.SAC.load(LOAD_DIR, env=train_env, tensorboard_log=str(log_dir))
+            model = sb.SAC.load(LOAD_DIR, env=train_env, tensorboard_log=str(log_dir), device=device)
             model.load_replay_buffer(LOAD_DIR + "_replay_buffer")
 
             # Delete previous model if not keeping
@@ -152,4 +178,3 @@ if __name__ == "__main__":
             # Delete previous replay buffer if not keeping
             if not keep_buffers and os.path.exists(str(log_dir) + f"/rl_model_{prev_step}_steps_replay_buffer.pkl"):
                 os.remove(str(log_dir) + f"/rl_model_{prev_step}_steps_replay_buffer.pkl")
-

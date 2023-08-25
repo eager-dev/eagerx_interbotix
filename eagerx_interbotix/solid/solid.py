@@ -134,7 +134,9 @@ class Solid(Object):
 
         spec.engine.states.position = HumanReset.make(description="Waiting for object position reset (w.r.t robot base) to")
         spec.engine.states.velocity = DummyState.make()
-        spec.engine.states.orientation = DummyState.make()
+        spec.engine.states.orientation = HumanReset.make(
+            description="Waiting for object orientation reset (w.r.t robot base) to"
+        )
         spec.engine.states.angular_vel = DummyState.make()
         spec.engine.states.lateral_friction = DummyState.make()
 

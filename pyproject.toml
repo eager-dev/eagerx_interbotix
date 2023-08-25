@@ -12,6 +12,7 @@ include = ["assets"]
 [tool.poetry.dependencies]
 python = "^3.8"
 #eagerx-gui = "^0.2.9"
+eagerx = "^0.1.35"
 eagerx-pybullet = "^0.1.10"
 eagerx-reality = "^0.1.12"
 scipy = "^1.0"
@@ -23,6 +24,8 @@ opencv-contrib-python = "^4.6.0"
 h5py = "^3.7.0"
 torch = {version = "^1.10.2", source = "torch"}
 torchvision = {version = "^0.11.3", source = "torch"}
+moviepy = "^1.0.3"
+seaborn = "^0.12.2"
 
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
@@ -35,7 +38,7 @@ flake8-bugbear = "^22.3.23"
 [[tool.poetry.source]]
 name = "torch"
 url = "https://download.pytorch.org/whl/cu113"
-secondary = true
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

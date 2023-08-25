@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
         urdf_path = root / "eagerx_interbotix" / "solid" / "assets"
         intrinsics_path = root / "assets" / "calibrations" / "logitech_c170_2023_02_17.yaml"
-        extrinsics_path = root / "assets" / "calibrations" / "eye_hand_calibration_2023-02-22-1128.yaml"
+        extrinsics_path = root / "assets" / "calibrations" / "c170.yaml"
         with open(str(intrinsics_path), "r") as f:
             cam_intrinsics = yaml.safe_load(f)
         with open(str(extrinsics_path), "r") as f:
@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
         goal = Goal.make(
             "goal",
-            urdf=str(urdf_path / "box_goal.urdf"),
+            urdf=str(urdf_path / "circle_goal.urdf"),
             rate=rate,
             sensors=["position"],
             states=["position", "orientation"],
@@ -165,7 +165,7 @@ if __name__ == "__main__":
             robot_type=robot_type,
             sensors=["position", "velocity", "force_torque", "ee_pos", "ee_orn"],
             actuators=[],
-            states=["position", "velocity", "gripper"],
+            states=["position", "velocity", "gripper", "color"],
             rate=rate,
         )
         arm.states.gripper.space.update(low=[0.0], high=[0.0])  # Set gripper to closed position
@@ -179,23 +179,38 @@ if __name__ == "__main__":
 
         robot_des = getattr(mrd, robot_type)
         c = arm.config
-        ik = EndEffectorDownward.make(
-            "ik",
-            rate,
-            c.joint_names,
-            robot_des.Slist.tolist(),
-            robot_des.M.tolist(),
-            c.joint_upper,
-            c.joint_lower,
-            max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
-            max_dyaw=2 * np.pi / 2,  # 1/5 round / second
-        )
-        graph.add(ik)
 
-        if pos_control:
-            safe = position_control(graph, arm, dict(source=ik.outputs.target), safe_rate, vel_limit)
+        if "ik" in cfg["settings"][setting].keys() and not cfg["settings"][setting]["ik"]:
+            if pos_control:
+                safe = position_control(graph, arm, dict(action="joint_pos"), safe_rate, vel_limit)
+            else:
+                safe = velocity_control(graph, arm, dict(action="joint_vel"), safe_rate, vel_limit)
+            graph.gui()
         else:
-            safe = velocity_control(graph, arm, dict(source=ik.outputs.dtarget), safe_rate, vel_limit)
+            ik = EndEffectorDownward.make(
+                "ik",
+                rate,
+                c.joint_names,
+                robot_des.Slist.tolist(),
+                robot_des.M.tolist(),
+                c.joint_upper,
+                c.joint_lower,
+                max_dxyz=[0.2, 0.2, 0.2],  # 10 cm / sec
+                max_dyaw=2 * np.pi / 2,  # 1/5 round / second
+            )
+            graph.add(ik)
+
+            if pos_control:
+                safe = position_control(graph, arm, dict(source=ik.outputs.target), safe_rate, vel_limit)
+            else:
+                safe = velocity_control(graph, arm, dict(source=ik.outputs.dtarget), safe_rate, vel_limit)
+            # Connect IK
+            graph.connect(source=arm.sensors.position, target=ik.inputs.current)
+            graph.connect(source=arm.sensors.ee_pos, target=ik.inputs.xyz)
+            graph.connect(source=arm.sensors.ee_orn, target=ik.inputs.orn)
+            # Connecting actions
+            graph.connect(action="dxyz", target=ik.inputs.dxyz)
+            graph.connect(action="dyaw", target=ik.inputs.dyaw)
 
         # Connecting observations
         graph.connect(source=arm.sensors.position, observation="joints")
@@ -205,13 +220,6 @@ if __name__ == "__main__":
         graph.connect(source=solid.sensors.position, observation="pos")
         graph.connect(source=solid.sensors.yaw, observation="yaw")
         graph.connect(source=goal.sensors.position, observation="pos_desired")
-        # Connect IK
-        graph.connect(source=arm.sensors.position, target=ik.inputs.current)
-        graph.connect(source=arm.sensors.ee_pos, target=ik.inputs.xyz)
-        graph.connect(source=arm.sensors.ee_orn, target=ik.inputs.orn)
-        # Connecting actions
-        graph.connect(action="dxyz", target=ik.inputs.dxyz)
-        graph.connect(action="dyaw", target=ik.inputs.dyaw)
 
         graph_dir = root / "exps" / "train" / "graphs"
         graph_dir.mkdir(parents=True, exist_ok=True)

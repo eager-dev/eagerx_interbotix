@@ -1,6 +1,6 @@
 train:
-  device: cuda
-  repetition: 1
+  device: cuda:0
+  repetition: 0
   cluster: False
   gui: False
   keep_models: True
@@ -22,25 +22,32 @@ train:
   goal_position_high: [0.4, 0.2, 0.0]
   goal_orientation_low: [-1., -1., 0., 0.]
   goal_orientation_high: [1., 1., 0., 0.]
+  use_ros: True
 
 settings:
+  baseline_no_ik:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.25
+    friction_high: 0.25
+    ik: False
+    name: PyBullet
+  friction_no_ik:
+    delay_min: 0
+    delay_max: 0
+    friction_low: 0.1
+    friction_high: 0.4
+    ik: False
+    name: PyBullet + DR
   baseline:
     delay_min: 0
     delay_max: 0
     friction_low: 0.25
     friction_high: 0.25
-  delay:
-    delay_min: 0.1
-    delay_max: 0.2
-    friction_low: 0.25
-    friction_high: 0.25
+    name: PyBullet + IK
   friction:
     delay_min: 0
     delay_max: 0
     friction_low: 0.1
     friction_high: 0.4
-  delay_friction:
-    delay_min: 0.1
-    delay_max: 0.2
-    friction_low: 0.1
-    friction_high: 0.4
+    name: PyBullet + IK DR

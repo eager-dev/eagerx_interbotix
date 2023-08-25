@@ -212,3 +212,90 @@ class MoveUp(eagerx.ResetNode):
         output_msgs = dict(dxyz=np.asarray(dxyz, dtype="float32"), dyaw=np.asarray(dyaw, dtype="float32"))
         output_msgs["velocity/done"] = is_done
         return output_msgs
+
+
+class MoveUpVelControl(eagerx.ResetNode):
+    @classmethod
+    def make(
+        cls,
+        name: str,
+        rate: float,
+        target_pos: List[float],
+        timeout: float = 5.0,
+        threshold: float = 0.05,
+        pos_gain: float = 0.5,
+        vel_gain: float = 0.1,
+        process: int = eagerx.NEW_PROCESS,
+        color: str = "grey",
+    ) -> ResetNodeSpec:
+        """Resets joints to goal positions.
+
+        :param name: Node name
+        :param rate: Rate at which callback is called.
+        :param Slist: Screw axes in the space frame when the manipulator is at the home position, in the format of a matrix
+                        with the screw axes as the columns.
+        :param M: The home configuration of the end-effector.
+        :param target_pos: Target joint positions.
+        :param timeout: Seconds before considering the reset to be finished, regardless of the closeness. A value of `0` means
+                        indefinite.
+        :param process: {0: NEW_PROCESS, 1: ENVIRONMENT, 2: ENGINE, 3: EXTERNAL}
+        :param color: console color of logged messages. {'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'grey'}
+        :return: Node specification.
+        """
+        spec = cls.get_specification()
+
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = process
+        spec.config.color = color
+        spec.config.inputs = ["current_pos", "current_vel"]
+        spec.config.targets = ["velocity"]
+        spec.config.outputs = ["joint_vel"]
+
+        # Add custom params
+        spec.config.target_pos = target_pos
+        spec.config.threshold = threshold
+        spec.config.pos_gain = pos_gain
+        spec.config.vel_gain = vel_gain
+        spec.config.timeout = timeout
+        return spec
+
+    def initialize(self, spec: ResetNodeSpec):
+        self.timeout = spec.config.timeout
+        self.threshold = spec.config.threshold
+        self.pos_gain = spec.config.pos_gain
+        self.vel_gain = spec.config.vel_gain
+        self.target_pos = np.array(spec.config.target_pos)
+
+    @register.states()
+    def reset(self):
+        self.start = None
+
+    @register.inputs(current_pos=Space(dtype="float32"), current_vel=Space(dtype="float32"))
+    @register.targets(velocity=Space(dtype="float32"))
+    @register.outputs(joint_vel=Space(dtype="float32"))
+    def callback(self, t_n: float, velocity: Msg = None, current_pos: Msg = None, current_vel: Msg = None):
+        if self.start is None:
+            self.start = t_n
+
+        # Process goal & current joint msgs
+        joint_pos = current_pos.msgs[-1]
+        joint_vel = current_vel.msgs[-1]
+
+        # Determine done flag
+
+        vel_command = (self.target_pos - joint_pos) * self.pos_gain - joint_vel * self.vel_gain
+
+        is_done = False
+        if np.isclose(joint_pos, self.target_pos, atol=self.threshold).all():
+            vel_command *= 0
+            is_done = True
+        if self.timeout > 0 and self.timeout < (t_n - self.start):
+            vel_command *= 0
+            is_done = True
+
+        # Create output message
+        output_msgs = dict(joint_vel=np.asarray(vel_command, dtype="float32"))
+        output_msgs["velocity/done"] = is_done
+        return output_msgs

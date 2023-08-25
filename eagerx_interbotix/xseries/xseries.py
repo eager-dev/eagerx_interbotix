@@ -37,7 +37,7 @@ class Xseries(eagerx.Object):
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
         gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
-        # color=Space(low=[0, 0, 0, 1], high=[0.1, 0.1, 0.1, 1], shape=(4,), dtype="float32"),
+        color=Space(low=[0.25, 0.25, 0.25, 1], high=[0.25, 0.25, 0.25, 1], shape=(4,), dtype="float32"),
     )
     def make(
         cls,
@@ -173,7 +173,7 @@ class Xseries(eagerx.Object):
         spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
         spec.engine.states.position = JointState.make(joints=joints, mode="position")
         spec.engine.states.velocity = JointState.make(joints=joints, mode="velocity")
-        # spec.engine.states.color = LinkColorState.make()
+        spec.engine.states.color = LinkColorState.make()
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
@@ -261,6 +261,7 @@ class Xseries(eagerx.Object):
         spec.engine.states.position = CopilotStateReset.make(spec.config.name, spec.config.robot_type)
         spec.engine.states.velocity = DummyState.make()
         spec.engine.states.gripper = DummyState.make()
+        spec.engine.states.color = DummyState.make()
 
         # Create sensor engine nodes
         from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm, DummySensor
@@ -268,6 +269,7 @@ class Xseries(eagerx.Object):
         joints = spec.config.joint_names
         robot_type = spec.config.robot_type
         arm_name = spec.config.arm_name
+        # arm_name = robot_type
 
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
         pos_sensor = XseriesSensor.make(

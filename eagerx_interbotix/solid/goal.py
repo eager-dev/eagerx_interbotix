@@ -6,7 +6,6 @@ from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
 from eagerx_interbotix.solid.yaw_node import WrappedYawSensor
-from pathlib import Path
 
 
 class Goal(Object):

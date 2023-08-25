@@ -6,8 +6,6 @@ from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
 
-from typing import List
-
 
 class Camera(eagerx.Object):
     @classmethod

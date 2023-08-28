@@ -141,26 +141,6 @@ class Overlay(eagerx.Node):
 
         # Draw goal frame
         if goal_pos is not None and goal_ori is not None:
-            # draw goal square
-            # goal_rotation_matrix = R.from_quat(goal_ori).as_matrix()
-            # p1 = goal_pos + 1.2 * goal_rotation_matrix @ np.array([-0.05, -0.05, 0.0])
-            # p2 = goal_pos + 1.2 * goal_rotation_matrix @ np.array([0.05, -0.05, 0.0])
-            # p3 = goal_pos + 1.2 * goal_rotation_matrix @ np.array([0.05, 0.05, 0.0])
-            # p4 = goal_pos + 1.2 * goal_rotation_matrix @ np.array([-0.05, 0.05, 0.0])
-            # p1 = self.homogeneous_matrix[:3, :3] @ p1 + self.homogeneous_matrix[:3, 3]
-            # p2 = self.homogeneous_matrix[:3, :3] @ p2 + self.homogeneous_matrix[:3, 3]
-            # p3 = self.homogeneous_matrix[:3, :3] @ p3 + self.homogeneous_matrix[:3, 3]
-            # p4 = self.homogeneous_matrix[:3, :3] @ p4 + self.homogeneous_matrix[:3, 3]
-            #
-            # p1 = cv2.projectPoints(p1.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            # p2 = cv2.projectPoints(p2.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            # p3 = cv2.projectPoints(p3.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            # p4 = cv2.projectPoints(p4.reshape(1, 3), np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0][0][0]
-            # cv2.line(mn, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (0, 255, 0), 2)
-            # cv2.line(mn, (int(p2[0]), int(p2[1])), (int(p3[0]), int(p3[1])), (0, 255, 0), 2)
-            # cv2.line(mn, (int(p3[0]), int(p3[1])), (int(p4[0]), int(p4[1])), (0, 255, 0), 2)
-            # cv2.line(mn, (int(p4[0]), int(p4[1])), (int(p1[0]), int(p1[1])), (0, 255, 0), 2)
-
             # draw points in circle with radius 0.05 * sqrt(2)
             mn = np.ascontiguousarray(mn)
             goal_pos = goal_pos.reshape((3, 1))
@@ -171,14 +151,14 @@ class Overlay(eagerx.Node):
             p = cv2.projectPoints(p.T, np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix, self.dist_coeffs)[0].reshape(
                 -1, 2
             )
-            # for i in range(p.shape[0]):
-            #     cv2.line(
-            #         mn,
-            #         (int(p[i, 0]), int(p[i, 1])),
-            #         (int(p[(i + 1) % p.shape[0], 0]), int(p[(i + 1) % p.shape[0], 1])),
-            #         (0, 255, 0),
-            #         2,
-            #     )
+            for i in range(p.shape[0]):
+                cv2.line(
+                    mn,
+                    (int(p[i, 0]), int(p[i, 1])),
+                    (int(p[(i + 1) % p.shape[0], 0]), int(p[(i + 1) % p.shape[0], 1])),
+                    (0, 255, 0),
+                    2,
+                )
 
             tn = np.ascontiguousarray(tn)
             p = goal_pos + np.sqrt(2) * 0.05 * np.array(
@@ -188,14 +168,14 @@ class Overlay(eagerx.Node):
             p = cv2.projectPoints(
                 p.T, np.zeros((3, 1)), np.zeros((3, 1)), self.camera_matrix_overview, self.dist_coeffs_overview
             )[0].reshape(-1, 2)
-            # for i in range(p.shape[0]):
-            #     cv2.line(
-            #         tn,
-            #         (int(p[i, 0]), int(p[i, 1])),
-            #         (int(p[(i + 1) % p.shape[0], 0]), int(p[(i + 1) % p.shape[0], 1])),
-            #         (0, 255, 0),
-            #         3,
-            #     )
+            for i in range(p.shape[0]):
+                cv2.line(
+                    tn,
+                    (int(p[i, 0]), int(p[i, 1])),
+                    (int(p[(i + 1) % p.shape[0], 0]), int(p[(i + 1) % p.shape[0], 1])),
+                    (0, 255, 0),
+                    3,
+                )
 
         # Resize main
         mn_PIL = PIL.Image.fromarray(mn).convert("RGB")

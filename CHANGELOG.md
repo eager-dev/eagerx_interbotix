@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.9 (2023-08-28)
+
+### Fix
+
+* Python-semantic-release-version ([`57fdece`](https://github.com/eager-dev/eagerx_interbotix/commit/57fdece69bd4a782139b4bb1a1ecd18af75b6545))
+* Refactor gym to gymnasium ([`e208f08`](https://github.com/eager-dev/eagerx_interbotix/commit/e208f08fac9be46d93570ce687a18e7061ad5065))
+* Include experiment updates ([`ec41b57`](https://github.com/eager-dev/eagerx_interbotix/commit/ec41b577ce71a5111d2629eaacf6dca5c54ced7c))
+
+### Documentation
+
+* Add instructions to copilot ([`9fa0d0d`](https://github.com/eager-dev/eagerx_interbotix/commit/9fa0d0deb1afe29d9f9d51d564d15b32a5a024f1))
+
 ## v0.1.8 (2022-09-13)
 ### Fix
 * Graph refactor, real world aruco working with inverse kinematics ([#23](https://github.com/eager-dev/eagerx_interbotix/issues/23)) ([`9c60b60`](https://github.com/eager-dev/eagerx_interbotix/commit/9c60b60aadf0d55e2647dde4f8e345341da85b93))

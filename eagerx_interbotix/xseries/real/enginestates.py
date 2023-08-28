@@ -21,7 +21,7 @@ class CopilotStateReset(eagerx.EngineState):
     @classmethod
     def make(cls, arm_name: str, robot_type: str):
         spec = cls.get_specification()
-        spec.update(arm_name=arm_name, robot_type=robot_type)
+        spec.config.update(arm_name=arm_name, robot_type=robot_type)
         return spec
 
     def initialize(self, spec: EngineStateSpec, simulator: Any):
@@ -33,5 +33,6 @@ class CopilotStateReset(eagerx.EngineState):
     def reset(self, state: np.ndarray):
         f = self.arm.wait_for_feedthrough()
         f.result()  # Wait for feedthrough to be toggled on.
-        f = self.arm.go_to(points=list(state), timestamps=5.0)
+        f = self.arm.write_commands([0.0 for _ in state])
+        # f = self.arm.go_to(points=list(state), timestamps=5.0)
         f.result()  # Wait for the desired position to be reached.

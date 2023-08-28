@@ -5,10 +5,18 @@ from eagerx_pybullet.engine import PybulletEngine
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
-from eagerx_interbotix.utils import generate_urdf, get_configs
+import eagerx_interbotix
+from eagerx_interbotix.utils import generate_urdf, get_configs, XmlListConfig
+
+import os
+from xml.etree import cElementTree as ElementTree
 
 # ROS IMPORTS
-from urdf_parser_py.urdf import URDF
+try:
+    from urdf_parser_py.urdf import URDF
+except ImportError:
+    print("Cannot find ROS.")
+    URDF = None
 
 
 class Xseries(eagerx.Object):
@@ -16,6 +24,7 @@ class Xseries(eagerx.Object):
     @register.sensors(
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
+        force_torque=Space(low=-20, high=20, shape=(6,), dtype="float32"),
         ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32"),
         ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32"),
     )
@@ -28,11 +37,13 @@ class Xseries(eagerx.Object):
         position=Space(dtype="float32"),
         velocity=Space(dtype="float32"),
         gripper=Space(low=[0.5], high=[0.5], dtype="float32"),
+        color=Space(low=[0.25, 0.25, 0.25, 1], high=[0.25, 0.25, 0.25, 1], shape=(4,), dtype="float32"),
     )
     def make(
         cls,
         name: str,
         robot_type: str,
+        arm_name=None,
         sensors=None,
         actuators=None,
         states=None,
@@ -45,6 +56,9 @@ class Xseries(eagerx.Object):
         mode_config=None,
     ) -> ObjectSpec:
         """Object spec of Xseries"""
+        if URDF is None:
+            raise ImportError("Ros not installed. Required for generating urdf.")
+
         spec = cls.get_specification()
 
         # Extract info on xseries arm from assets
@@ -84,10 +98,11 @@ class Xseries(eagerx.Object):
         spec.config.name = name
         spec.config.sensors = sensors if isinstance(sensors, list) else ["position"]
         spec.config.actuators = actuators if isinstance(actuators, list) else ["pos_control", "gripper_control"]
-        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper"]
+        spec.config.states = states if isinstance(states, list) else ["position", "velocity", "gripper", "color"]
 
         # Add registered config params
         spec.config.robot_type = robot_type
+        spec.config.arm_name = arm_name if arm_name else robot_type
         spec.config.joint_names = joint_names
         spec.config.gripper_names = gripper_names
         spec.config.gripper_link = gripper_link
@@ -106,6 +121,7 @@ class Xseries(eagerx.Object):
         # Set rates
         spec.sensors.position.rate = rate
         spec.sensors.velocity.rate = rate
+        spec.sensors.force_torque.rate = rate
         spec.sensors.ee_pos.rate = rate
         spec.sensors.ee_orn.rate = rate
         spec.actuators.pos_control.rate = rate
@@ -126,40 +142,52 @@ class Xseries(eagerx.Object):
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
         # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.)
-        spec.engine.urdf = spec.config.urdf
+        # todo: spec.config.urdf: replace "package://interbotix_xsarm_descriptions/" with "os.path.dirname(eagerx_interbotix.__file__) + "/../assets/""
+        module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
+        urdf = spec.config.urdf
+        urdf_sbtd = urdf.replace("package://interbotix_xsarm_descriptions/", module_path)
+        spec.engine.urdf = urdf_sbtd
         spec.engine.basePosition = spec.config.base_pos
         spec.engine.baseOrientation = spec.config.base_or
         spec.engine.fixed_base = spec.config.fixed_base
         spec.engine.self_collision = spec.config.self_collision
 
         # Determine gripper min/max
-        urdf = URDF.from_parameter_server(generate_urdf(spec.config.robot_type, ns="pybullet_urdf"))
+        tree = ElementTree.ElementTree(ElementTree.fromstring(urdf_sbtd))
+        root = tree.getroot()
+        urdf_list = XmlListConfig(root)
+        # todo: urdf = URDF.from_xml(spec.config.urdf)
         lower, upper = [], []
         for name in spec.config.gripper_names:
-            joint_obj = next((joint for joint in urdf.joints if joint.name == name), None)
-            lower.append(joint_obj.limit.lower)
-            upper.append(joint_obj.limit.upper)
-        constant = abs(lower[0])
-        scale = upper[0] - lower[0]
+            joint_obj = next((joint for joint in urdf_list if joint["name"] == name), None)
+            lower.append(joint_obj["limit"]["lower"])
+            upper.append(joint_obj["limit"]["upper"])
+        constant = abs(float(lower[0]))
+        scale = float(upper[0]) - float(lower[0])
 
         # Create engine_states (no agnostic states defined in this case)
-        from eagerx_interbotix.xseries.pybullet.enginestates import PbXseriesGripper
+        from eagerx_interbotix.xseries.pybullet.enginestates import PbXseriesGripper, LinkColorState
         from eagerx_pybullet.enginestates import JointState
 
         joints = spec.config.joint_names
         spec.engine.states.gripper = PbXseriesGripper.make(spec.config.gripper_names, constant, scale)
         spec.engine.states.position = JointState.make(joints=joints, mode="position")
         spec.engine.states.velocity = JointState.make(joints=joints, mode="velocity")
+        spec.engine.states.color = LinkColorState.make()
 
         # Fix gripper if we are not controlling it.
         if "gripper_control" not in spec.config.actuators:
             spec.engine.states.gripper.fixed = True
 
         # Create sensor engine nodes
-        from eagerx_pybullet.enginenodes import LinkSensor, JointSensor, JointController
+        from eagerx_pybullet.enginenodes import LinkSensor, JointSensor
+        from eagerx_interbotix.xseries.pybullet.enginenodes import JointController
 
         pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.position.rate, process=2, joints=joints, mode="position")
         vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, process=2, joints=joints, mode="velocity")
+        ft_sensor = JointSensor.make(
+            "ft_sensor", rate=spec.sensors.force_torque.rate, process=2, joints=["wrist_rotate"], mode="force_torque"
+        )
         ee_pos_sensor = LinkSensor.make(
             "ee_pos_sensor",
             rate=spec.sensors.ee_pos.rate,
@@ -193,6 +221,7 @@ class Xseries(eagerx.Object):
             mode="velocity_control",
             vel_gain=len(joints) * [1.0],
             max_force=len(joints) * [2.0],  # todo: limit to 1.0?
+            delay_state=True,
         )
         gripper = JointController.make(
             "gripper_control",
@@ -209,9 +238,10 @@ class Xseries(eagerx.Object):
         gripper.inputs.action.processor = MirrorAction.make(index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ft_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
+        graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
         graph.connect(source=ee_orn_sensor.outputs.obs, sensor="ee_orn")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
@@ -231,18 +261,49 @@ class Xseries(eagerx.Object):
         spec.engine.states.position = CopilotStateReset.make(spec.config.name, spec.config.robot_type)
         spec.engine.states.velocity = DummyState.make()
         spec.engine.states.gripper = DummyState.make()
+        spec.engine.states.color = DummyState.make()
 
         # Create sensor engine nodes
-        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm
+        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm, DummySensor
 
         joints = spec.config.joint_names
+        robot_type = spec.config.robot_type
+        arm_name = spec.config.arm_name
+        # arm_name = robot_type
+
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
-        pos_sensor = XseriesSensor.make("pos_sensor", rate=spec.sensors.position.rate, joints=joints, mode="position")
-        ee_pos_sensor = XseriesSensor.make("ee_pos_sensor", rate=spec.sensors.ee_pos.rate, joints=joints, mode="ee_position")
-        ee_orn_sensor = XseriesSensor.make(
-            "ee_orn_sensor", rate=spec.sensors.ee_orn.rate, joints=joints, mode="ee_orientation"
+        pos_sensor = XseriesSensor.make(
+            "pos_sensor",
+            rate=spec.sensors.position.rate,
+            joints=joints,
+            mode="position",
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
-        vel_sensor = XseriesSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, joints=joints, mode="velocity")
+        ee_pos_sensor = XseriesSensor.make(
+            "ee_pos_sensor",
+            rate=spec.sensors.ee_pos.rate,
+            joints=joints,
+            mode="ee_position",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
+        ee_orn_sensor = XseriesSensor.make(
+            "ee_orn_sensor",
+            rate=spec.sensors.ee_orn.rate,
+            joints=joints,
+            mode="ee_orientation",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
+        vel_sensor = XseriesSensor.make(
+            "vel_sensor",
+            rate=spec.sensors.velocity.rate,
+            joints=joints,
+            mode="velocity",
+            arm_name=arm_name,
+            robot_type=robot_type,
+        )
 
         # Create actuator engine nodes
         # todo: set space to limits (pos=joint_limits, vel=vel_limits, effort=[-1, 1]?)
@@ -256,6 +317,8 @@ class Xseries(eagerx.Object):
             profile_velocity=131,
             kp_pos=800,
             kd_pos=1000,
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
         vel_control = XseriesArm.make(
             "vel_control",
@@ -267,13 +330,22 @@ class Xseries(eagerx.Object):
             profile_acceleration=0,
             kp_pos=640,
             kd_pos=800,
-            kp_vel=1900,
-            ki_vel=500,
+            # kp_vel=5000,
+            kp_vel=[5000, 5600, 5300, 5000, 5000, 5000],
+            ki_vel=[400, 120, 120, 400, 300, 300],
+            # kp_vel=[5000, 5600, 5300, 5000, 5000, 5000],
+            # ki_vel=[350, 150, 150, 400, 250, 250],
+            arm_name=arm_name,
+            robot_type=robot_type,
         )
-        gripper = XseriesGripper.make("gripper_control", rate=spec.actuators.gripper_control.rate)
+        gripper = XseriesGripper.make(
+            "gripper_control", rate=spec.actuators.gripper_control.rate, arm_name=arm_name, robot_type=robot_type
+        )
+        ft_sensor = DummySensor.make("ft_sensor", rate=spec.sensors.force_torque.rate)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper, ft_sensor])
+        graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")

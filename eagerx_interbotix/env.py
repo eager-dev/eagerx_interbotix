@@ -2,7 +2,7 @@ from scipy.spatial.transform import Rotation as R
 import typing as t
 import eagerx
 import numpy as np
-import gym
+import gymnasium as gym
 
 
 # Define environment
@@ -22,9 +22,11 @@ class ArmEnv(eagerx.BaseEnv):
         delay_max: float = None,
         ori_rwd: bool = True,
         eval: bool = False,
+        render_mode: str = "rgb_array",
     ):
-        super().__init__(name, rate, graph, engine, backend=backend, force_start=False)
+        super().__init__(name, rate, graph, engine, backend=backend, force_start=False, render_mode=render_mode)
         self.steps = 0
+        self.render_mode = render_mode
         self.max_steps = max_steps
         self._ori_rwd = ori_rwd
         self._seed = seed
@@ -105,15 +107,12 @@ class ArmEnv(eagerx.BaseEnv):
         if self._ori_rwd:
             rwd += rwd_or
         # Print rwd build-up
-        out_of_reach = np.linalg.norm(achieved_pos[:2]) > 1.0
-        if out_of_reach:
+        terminated = np.linalg.norm(achieved_pos[:2]) > 1.0
+        if terminated:
             rwd = -50
 
-        timed_out = self.steps >= self.max_steps
-        if timed_out:
-            info["TimeLimit.truncated"] = True
-
-        done = out_of_reach | timed_out
+        truncated = self.steps >= self.max_steps
+        done = terminated or truncated
 
         # Simulate bias in observations.
         if self._add_bias:
@@ -130,9 +129,12 @@ class ArmEnv(eagerx.BaseEnv):
         if done:
             self._episode += 1
 
-        return obs, rwd, done, info
+        if self.render_mode == "human":
+            self.render()
 
-    def reset(self, states: t.Optional[t.Dict[str, np.ndarray]] = None):
+        return obs, rwd, terminated, truncated, info
+
+    def reset(self, states: t.Optional[t.Dict[str, np.ndarray]] = None, seed=None, options=None):
         # Reset steps counter
         self.steps = 0
 
@@ -216,4 +218,8 @@ class ArmEnv(eagerx.BaseEnv):
 
         if "dtarget" in obs and np.isnan(obs["dtarget"]).any():
             obs["dtarget"] = np.nan_to_num(obs["dtarget"])
-        return obs
+
+        # Render
+        if self.render_mode == "human":
+            self.render()
+        return obs, {}

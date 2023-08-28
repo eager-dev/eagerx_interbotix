@@ -259,8 +259,8 @@ if __name__ == "__main__":
 
     for eps in range(5000):
         print(f"Episode {eps}")
-        _, done = goal_env.reset(), False
+        _, _, done = goal_env.reset(), False
         done = np.array([done], dtype="bool") if isinstance(done, bool) else done
         while not done.all():
             action = goal_env.action_space.sample()
-            obs, reward, done, info = goal_env.step(action)
+            obs, reward, terminated, truncated, info = goal_env.step(action)

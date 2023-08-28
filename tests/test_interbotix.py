@@ -259,16 +259,17 @@ def test_interbotix(eps, num_steps, sync, rtf, p):
                 backend=backend,
                 exclude_z=excl_z,
                 max_steps=int(T_max * rate),
+                render_mode="rgb_array",
             )
     goal_env = GoalArmEnv(env, add_bias=add_bias)
 
     # Evaluate for 30 seconds in simulation
     _, action = goal_env.reset(), goal_env.action_space.sample()
     for i in range(3):
-        obs, reward, done, info = goal_env.step(action)
-        if done:
-            _, action = goal_env.reset(), goal_env.action_space.sample()
-            _rgb = goal_env.render("rgb_array")
+        obs, reward, terminated, truncated, info = goal_env.step(action)
+        if terminated or truncated:
+            _, _, action = goal_env.reset(), goal_env.action_space.sample()
+            _rgb = goal_env.render()
             print(f"Episode {i}")
     print("\n[Finished]")
 

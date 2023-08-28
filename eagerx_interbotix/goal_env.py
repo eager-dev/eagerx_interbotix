@@ -1,5 +1,5 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 from eagerx import BaseEnv
 
@@ -87,7 +87,7 @@ class GoalArmEnv(gym.Wrapper):
 
     def step(self, action):
         action = dict(self.action(action))
-        obs, rwd, done, info = self._env.step(action)
+        obs, rwd, terminated, truncated, info = self._env.step(action)
 
         # Calculate rewards independent of goal for HER
         force = obs["force_torque"][0] if len(obs["force_torque"][0]) > 0 else 3 * [0.0]
@@ -101,11 +101,11 @@ class GoalArmEnv(gym.Wrapper):
         info["rwd_goal_independent"] = rwd_near + rwd_ctrl + rwd_force
         if "image" in obs:
             info["image"] = obs["image"]
-        return self.observation(obs), rwd, done, info
+        return self.observation(obs), rwd, terminated, truncated, info
 
-    def reset(self):
-        obs = self._env.reset()
-        return self.observation(obs)
+    def reset(self, seed=None, options=None):
+        obs, info = self._env.reset()
+        return self.observation(obs), info
 
     def compute_reward(self, achieved_goal, desired_goal, info):
         pos_desired = desired_goal[:, :2]

@@ -27,11 +27,13 @@ class Xseries(eagerx.Object):
         force_torque=Space(low=-20, high=20, shape=(6,), dtype="float32"),
         ee_pos=Space(low=[-2, -2, 0], high=[2, 2, 2], dtype="float32"),
         ee_orn=Space(low=-1, high=1, shape=(4,), dtype="float32"),
+        moveit_status=Space(low=0, high=1, shape=(), dtype="int64"),
     )
     @register.actuators(
         pos_control=Space(dtype="float32"),
         vel_control=Space(dtype="float32"),
-        gripper_control=Space(low=[0], high=[1], dtype="float32"),
+        gripper_control=Space(low=[0.0], high=[1.0], dtype="float32"),
+        moveit_to=Space(dtype="float32"),
     )
     @register.engine_states(
         position=Space(dtype="float32"),
@@ -124,7 +126,9 @@ class Xseries(eagerx.Object):
         spec.sensors.force_torque.rate = rate
         spec.sensors.ee_pos.rate = rate
         spec.sensors.ee_orn.rate = rate
+        spec.sensors.moveit_status.rate = rate
         spec.actuators.pos_control.rate = rate
+        spec.actuators.moveit_to.rate = rate
         spec.actuators.vel_control.rate = rate
         spec.actuators.gripper_control.rate = 1
 
@@ -132,6 +136,7 @@ class Xseries(eagerx.Object):
         spec.sensors.position.space.update(low=joint_lower, high=joint_upper)
         spec.sensors.velocity.space.update(low=[-v for v in vel_limit], high=vel_limit)
         spec.actuators.pos_control.space.update(low=joint_lower, high=joint_upper)
+        spec.actuators.moveit_to.space.update(low=joint_lower, high=joint_upper)
         spec.actuators.vel_control.space.update(low=[-v for v in vel_limit], high=vel_limit)
         spec.states.position.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
         spec.states.velocity.space.update(low=[0.0 for _j in joint_lower], high=[0.0 for _j in joint_upper])
@@ -181,7 +186,7 @@ class Xseries(eagerx.Object):
 
         # Create sensor engine nodes
         from eagerx_pybullet.enginenodes import LinkSensor, JointSensor
-        from eagerx_interbotix.xseries.pybullet.enginenodes import JointController
+        from eagerx_interbotix.xseries.pybullet.enginenodes import JointController, MoveItController
 
         pos_sensor = JointSensor.make("pos_sensor", rate=spec.sensors.position.rate, process=2, joints=joints, mode="position")
         vel_sensor = JointSensor.make("vel_sensor", rate=spec.sensors.velocity.rate, process=2, joints=joints, mode="velocity")
@@ -231,22 +236,36 @@ class Xseries(eagerx.Object):
             vel_target=[0.0, 0.0],
             pos_gain=[0.5, 0.5],
             vel_gain=[1.0, 1.0],
-            max_force=[2.0, 2.0],
+            max_force=[0.5, 0.5],
+        )
+        moveit_to = MoveItController.make(
+            "moveit_to",
+            rate=spec.actuators.moveit_to.rate,
+            joints=joints,
+            vel_target=len(joints) * [0.0],
+            pos_gain=len(joints) * [0.5],
+            vel_gain=len(joints) * [1.0],
+            max_vel=[0.5 * vel for vel in spec.config.vel_limit],
+            max_force=len(joints) * [1.0],
         )
         from eagerx_interbotix.xseries.processor import MirrorAction
 
         gripper.inputs.action.processor = MirrorAction.make(index=0, constant=constant, scale=scale)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ft_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper])
+        graph.add(
+            [pos_sensor, vel_sensor, ft_sensor, ee_pos_sensor, ee_orn_sensor, pos_control, vel_control, gripper, moveit_to]
+        )
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
         graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=ee_pos_sensor.outputs.obs, sensor="ee_pos")
         graph.connect(source=ee_orn_sensor.outputs.obs, sensor="ee_orn")
+        graph.connect(source=moveit_to.outputs.status, sensor="moveit_status")
         graph.connect(actuator="pos_control", target=pos_control.inputs.action)
         graph.connect(actuator="vel_control", target=vel_control.inputs.action)
         graph.connect(actuator="gripper_control", target=gripper.inputs.action)
+        graph.connect(actuator="moveit_to", target=moveit_to.inputs.action)
 
     @staticmethod
     @register.engine(RealEngine)

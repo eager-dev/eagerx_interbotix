@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.10 (2023-09-01)
+
+### Fix
+
+* Add moveit pybullet ([`011881b`](https://github.com/eager-dev/eagerx_interbotix/commit/011881b99b4d5afe06b0e8a3dec90a2e9b4628d0))
+
 ## v0.1.9 (2023-08-28)
 
 ### Fix

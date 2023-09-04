@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.1.11 (2023-09-04)
+
+### Fix
+
+* Codestyle and trigger new version ([`e9bf210`](https://github.com/eager-dev/eagerx_interbotix/commit/e9bf210606a98596ac224a09b5ffad98a43f91c2))
+* Move assets to xseries, add moveit controller, gripper sensor ([`42e3e93`](https://github.com/eager-dev/eagerx_interbotix/commit/42e3e93436be547a04ec8a0e4e3a9126e2b6c252))
+* Codestyle ([`bcfa56c`](https://github.com/eager-dev/eagerx_interbotix/commit/bcfa56c24f78be2f8a0d4c87cc9d3ab2a66449cf))
+* Add moveit controller and gripper sensor ([`8b35f2f`](https://github.com/eager-dev/eagerx_interbotix/commit/8b35f2fbae93b25aa7c2929a4168091583f398c8))
+* Move assets to xseries package ([`de0f947`](https://github.com/eager-dev/eagerx_interbotix/commit/de0f947635b6abafa6e11cae226e05271fa4e6d9))
+
 ## v0.1.10 (2023-09-01)
 
 ### Fix

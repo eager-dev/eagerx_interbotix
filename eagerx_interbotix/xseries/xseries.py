@@ -147,8 +147,8 @@ class Xseries(eagerx.Object):
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
         # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.)
-        # todo: spec.config.urdf: replace "package://interbotix_xsarm_descriptions/" with "os.path.dirname(eagerx_interbotix.__file__) + "/../assets/""
-        module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
+        module_path = os.path.dirname(__file__) + "/assets/"
+        assert os.path.exists(module_path), "Module path does not exist: {}".format(module_path)
         urdf = spec.config.urdf
         urdf_sbtd = urdf.replace("package://interbotix_xsarm_descriptions/", module_path)
         spec.engine.urdf = urdf_sbtd

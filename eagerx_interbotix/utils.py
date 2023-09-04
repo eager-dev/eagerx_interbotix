@@ -87,8 +87,10 @@ def launch_node(launch_file, args):
 def get_configs(robot_model: str, motor_config: str, mode_config: str):
     import rospy
 
-    module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
-    config_path = module_path + "config/"
+    module_path = os.path.dirname(__file__) + "/xseries/assets"
+    assert os.path.exists(module_path), f"Module path does not exist: {module_path}"
+    config_path = module_path + "/config"
+    assert os.path.exists(config_path), f"Config path does not exist: {config_path}"
     try:
         mode_config = mode_config if isinstance(mode_config, str) else f"{config_path}/modes.yaml"
         with open(mode_config, "r") as yamlfile:
@@ -121,7 +123,8 @@ def generate_urdf(
     import rosparam
     import rospy
 
-    module_path = os.path.dirname(eagerx_interbotix.__file__) + "/../assets/"
+    module_path = os.path.dirname(__file__) + "/xseries/assets/"
+    assert os.path.exists(module_path), f"Module path does not exist: {module_path}"
     launch_file = module_path + "xsarm_description.launch"
     cli_args = [
         f"module_path:={module_path}",

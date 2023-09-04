@@ -5,7 +5,6 @@ from eagerx_pybullet.engine import PybulletEngine
 from eagerx.core.specs import ObjectSpec
 from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
-import eagerx_interbotix
 from eagerx_interbotix.utils import generate_urdf, get_configs, XmlListConfig
 
 import os
@@ -141,7 +140,7 @@ class Xseries(eagerx.Object):
         spec.sensors.position.space.update(low=joint_lower, high=joint_upper)
         spec.sensors.velocity.space.update(low=[-v for v in vel_limit], high=vel_limit)
         # spec.sensors.gripper_position.space.update(low=[gripper_lower[0], -gripper_vel_limit[0]], high=[gripper_upper[1], gripper_vel_limit[0]])
-        spec.sensors.gripper_position.space.update(low=[gripper_lower[0]*0.9], high=[gripper_upper[0]*1.1])
+        spec.sensors.gripper_position.space.update(low=[gripper_lower[0] * 0.9], high=[gripper_upper[0] * 1.1])
         spec.actuators.pos_control.space.update(low=joint_lower, high=joint_upper)
         spec.actuators.moveit_to.space.update(low=joint_lower, high=joint_upper)
         spec.actuators.vel_control.space.update(low=[-v for v in vel_limit], high=vel_limit)
@@ -267,7 +266,18 @@ class Xseries(eagerx.Object):
 
         # Connect all engine nodes
         graph.add(
-            [pos_sensor, vel_sensor, ft_sensor, ee_pos_sensor, ee_orn_sensor, gripper_sensor, pos_control, vel_control, gripper, moveit_to]
+            [
+                pos_sensor,
+                vel_sensor,
+                ft_sensor,
+                ee_pos_sensor,
+                ee_orn_sensor,
+                gripper_sensor,
+                pos_control,
+                vel_control,
+                gripper,
+                moveit_to,
+            ]
         )
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")
@@ -297,7 +307,13 @@ class Xseries(eagerx.Object):
         spec.engine.states.color = DummyState.make()
 
         # Create sensor engine nodes
-        from eagerx_interbotix.xseries.real.enginenodes import XseriesGripper, XseriesSensor, XseriesArm, DummySensor, XseriesMoveIt
+        from eagerx_interbotix.xseries.real.enginenodes import (
+            XseriesGripper,
+            XseriesSensor,
+            XseriesArm,
+            DummySensor,
+            XseriesMoveIt,
+        )
 
         joints = spec.config.joint_names
         robot_type = spec.config.robot_type
@@ -385,18 +401,36 @@ class Xseries(eagerx.Object):
             arm_name=arm_name,
             robot_type=robot_type,
             joints=joints,
-            vel_limit=[0.5*c for c in spec.config.vel_limit],
+            vel_limit=[0.5 * c for c in spec.config.vel_limit],
             kp_pos=800,
             kd_pos=1000,
         )
         gripper = XseriesGripper.make(
-            "gripper_control", rate=spec.actuators.gripper_control.rate, arm_name=arm_name, robot_type=robot_type, pressure=spec.config.pressure,
-            pressure_lower=150, pressure_upper=350,
+            "gripper_control",
+            rate=spec.actuators.gripper_control.rate,
+            arm_name=arm_name,
+            robot_type=robot_type,
+            pressure=spec.config.pressure,
+            pressure_lower=150,
+            pressure_upper=350,
         )
         ft_sensor = DummySensor.make("ft_sensor", rate=spec.sensors.force_torque.rate)
 
         # Connect all engine nodes
-        graph.add([pos_sensor, vel_sensor, ee_pos_sensor, ee_orn_sensor, gripper_sensor, pos_control, vel_control, moveit_to, gripper, ft_sensor])
+        graph.add(
+            [
+                pos_sensor,
+                vel_sensor,
+                ee_pos_sensor,
+                ee_orn_sensor,
+                gripper_sensor,
+                pos_control,
+                vel_control,
+                moveit_to,
+                gripper,
+                ft_sensor,
+            ]
+        )
         graph.connect(source=ft_sensor.outputs.obs, sensor="force_torque")
         graph.connect(source=pos_sensor.outputs.obs, sensor="position")
         graph.connect(source=vel_sensor.outputs.obs, sensor="velocity")

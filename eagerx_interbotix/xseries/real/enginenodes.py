@@ -407,9 +407,7 @@ class XseriesMoveIt(eagerx.EngineNode):
 
         # Set motor configs
         spec.config.update(arm_name=arm_name, robot_type=robot_type)
-        spec.config.update(
-            mode="position", profile_type="velocity", profile_acceleration=13, profile_velocity=131
-        )
+        spec.config.update(mode="position", profile_type="velocity", profile_acceleration=13, profile_velocity=131)
         spec.config.update(kp_pos=kp_pos, ki_pos=ki_pos, kd_pos=kd_pos)
         spec.config.update(kp_vel=kp_vel, ki_vel=ki_vel)
         spec.config.update(ff_acc=ff_acc, ff_vel=ff_vel)

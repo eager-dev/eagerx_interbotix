@@ -1,5 +1,4 @@
 import os
-import eagerx_interbotix
 import yaml
 from eagerx.utils.utils_sub import substitute_args
 

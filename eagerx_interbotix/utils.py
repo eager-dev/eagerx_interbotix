@@ -1,6 +1,6 @@
 import os
 import yaml
-from eagerx.utils.utils_sub import substitute_args 
+from eagerx.utils.utils_sub import substitute_args
 
 
 class XmlListConfig(list):
